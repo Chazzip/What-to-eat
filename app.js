@@ -84,10 +84,15 @@
     resetLocalButton: byId("resetLocalButton"),
     areaNameInput: byId("areaNameInput"),
     areaSortInput: byId("areaSortInput"),
+    areaEditorBadge: byId("areaEditorBadge"),
+    areaEditorHint: byId("areaEditorHint"),
+    newAreaButton: byId("newAreaButton"),
     saveAreaButton: byId("saveAreaButton"),
     clearAreaFormButton: byId("clearAreaFormButton"),
     deleteAreaButton: byId("deleteAreaButton"),
     editorAreaSelect: byId("editorAreaSelect"),
+    foodEditorBadge: byId("foodEditorBadge"),
+    foodEditorHint: byId("foodEditorHint"),
     foodNameInput: byId("foodNameInput"),
     foodTagsInput: byId("foodTagsInput"),
     foodMoodsInput: byId("foodMoodsInput"),
@@ -97,6 +102,7 @@
     foodHoursInput: byId("foodHoursInput"),
     foodMapInput: byId("foodMapInput"),
     foodNoteInput: byId("foodNoteInput"),
+    newFoodButton: byId("newFoodButton"),
     saveFoodButton: byId("saveFoodButton"),
     clearFoodFormButton: byId("clearFoodFormButton"),
     deleteFoodButton: byId("deleteFoodButton"),
@@ -120,6 +126,8 @@
     currentResultAreaId: "",
     editingAreaId: "",
     editingFoodId: "",
+    areaEditorMode: "create",
+    foodEditorMode: "create",
     rollingTimer: null,
     toastTimer: null
   };
@@ -164,16 +172,15 @@
     dom.logoutButton.addEventListener("click", logoutAdmin);
     dom.exportButton.addEventListener("click", exportCurrentData);
     dom.resetLocalButton.addEventListener("click", resetLocalFallback);
+    dom.newAreaButton.addEventListener("click", () => enterCreateAreaMode());
     dom.saveAreaButton.addEventListener("click", saveArea);
     dom.clearAreaFormButton.addEventListener("click", clearAreaForm);
     dom.deleteAreaButton.addEventListener("click", deleteSelectedArea);
+    dom.newFoodButton.addEventListener("click", () => enterCreateFoodMode(dom.editorAreaSelect.value || dom.areaSelect.value));
     dom.saveFoodButton.addEventListener("click", saveFood);
     dom.clearFoodFormButton.addEventListener("click", clearFoodForm);
     dom.deleteFoodButton.addEventListener("click", deleteSelectedFood);
     dom.editorAreaSelect.addEventListener("change", () => {
-      if (!state.editingFoodId) {
-        syncAreaFormWithSelection(dom.editorAreaSelect.value);
-      }
       renderInventory();
     });
   }
@@ -403,7 +410,10 @@
       button.addEventListener("click", function () {
         dom.areaSelect.value = area.id;
         dom.editorAreaSelect.value = area.id;
-        syncAreaFormWithSelection(area.id);
+        enterEditAreaMode(area.id);
+        if (state.foodEditorMode === "create") {
+          enterCreateFoodMode(area.id);
+        }
         renderAreaMap();
         renderInventory();
       });
@@ -652,10 +662,12 @@
     const controls = [
       dom.areaNameInput,
       dom.areaSortInput,
+      dom.newAreaButton,
       dom.saveAreaButton,
       dom.clearAreaFormButton,
       dom.deleteAreaButton,
       dom.editorAreaSelect,
+      dom.foodEditorBadge,
       dom.foodNameInput,
       dom.foodTagsInput,
       dom.foodMoodsInput,
@@ -665,6 +677,7 @@
       dom.foodHoursInput,
       dom.foodMapInput,
       dom.foodNoteInput,
+      dom.newFoodButton,
       dom.saveFoodButton,
       dom.clearFoodFormButton,
       dom.deleteFoodButton
@@ -681,6 +694,21 @@
       dom.areaNameInput.placeholder = "例如：五一广场 / 公司附近";
       dom.foodNameInput.placeholder = "例如：螺蛳粉 / 煲仔饭 / 热卤";
     }
+
+    dom.areaEditorBadge.textContent = state.areaEditorMode === "edit" ? "编辑模式" : "新增模式";
+    dom.areaEditorHint.textContent = state.areaEditorMode === "edit"
+      ? "当前保存会修改这个区域本身。想新增新区域，请点“新增区域模式”。"
+      : "这里用来新增区域。点右侧“区域地图”里的区域，也可以切换到编辑该区域。";
+    dom.saveAreaButton.textContent = state.areaEditorMode === "edit" ? "保存区域修改" : "新增这个区域";
+    dom.deleteAreaButton.disabled = !editable || state.areaEditorMode !== "edit";
+
+    const currentFood = getFoodById(state.editingFoodId);
+    dom.foodEditorBadge.textContent = state.foodEditorMode === "edit" ? "编辑模式" : "新增模式";
+    dom.foodEditorHint.textContent = state.foodEditorMode === "edit" && currentFood
+      ? "当前保存会覆盖“" + currentFood.name + "”。想新增新条目，请点“新增美食模式”。"
+      : "当前会新增一条新的美食。点下面库存卡片后，才会进入编辑并覆盖那一条。";
+    dom.saveFoodButton.textContent = state.foodEditorMode === "edit" ? "保存这条修改" : "新增这条美食";
+    dom.deleteFoodButton.disabled = !editable || state.foodEditorMode !== "edit" || !currentFood;
   }
 
   async function decideDinner(randomAreaFirst) {
@@ -991,10 +1019,11 @@
       name: name,
       sort_order: sortOrder
     };
+    const wasEditingArea = state.areaEditorMode === "edit" && Boolean(state.editingAreaId);
 
     if (state.mode === "supabase") {
       let response;
-      if (state.editingAreaId) {
+      if (wasEditingArea) {
         response = await state.supabase.from("areas").update(payload).eq("id", state.editingAreaId).select().single();
       } else {
         response = await state.supabase.from("areas").insert(payload).select().single();
@@ -1009,7 +1038,7 @@
       await loadData();
     } else {
       const store = loadLocalStore();
-      if (state.editingAreaId) {
+      if (wasEditingArea) {
         store.areas = store.areas.map((area) => area.id === state.editingAreaId ? Object.assign({}, area, payload) : area);
       } else {
         state.editingAreaId = createLocalId("area");
@@ -1027,9 +1056,12 @@
 
     dom.areaSelect.value = state.editingAreaId || dom.areaSelect.value;
     dom.editorAreaSelect.value = state.editingAreaId || dom.editorAreaSelect.value;
-    syncAreaFormWithSelection(dom.editorAreaSelect.value);
+    enterEditAreaMode(dom.editorAreaSelect.value);
+    if (state.foodEditorMode === "create") {
+      enterCreateFoodMode(dom.editorAreaSelect.value);
+    }
     renderAll();
-    showToast("区域已保存。");
+    showToast(wasEditingArea ? "区域修改已保存。" : "新区域已创建。");
   }
 
   async function deleteSelectedArea() {
@@ -1104,9 +1136,11 @@
       is_active: true
     };
 
+    const isEditingFood = state.foodEditorMode === "edit" && Boolean(state.editingFoodId);
+
     if (state.mode === "supabase") {
       let response;
-      if (state.editingFoodId) {
+      if (isEditingFood) {
         response = await state.supabase.from("foods").update(payload).eq("id", state.editingFoodId).select().single();
       } else {
         response = await state.supabase.from("foods").insert(payload).select().single();
@@ -1121,7 +1155,7 @@
       await loadData();
     } else {
       const store = loadLocalStore();
-      if (state.editingFoodId) {
+      if (isEditingFood) {
         store.foods = store.foods.map((food) => food.id === state.editingFoodId ? Object.assign({}, food, payload) : food);
       } else {
         state.editingFoodId = createLocalId("food");
@@ -1139,8 +1173,20 @@
       await loadData();
     }
 
+    if (isEditingFood) {
+      const savedFood = getFoodById(state.editingFoodId);
+      if (savedFood) {
+        fillFoodForm(savedFood);
+      }
+      showToast("这条美食修改已保存。");
+    } else {
+      const preserveAreaId = areaId;
+      clearFoodForm();
+      dom.editorAreaSelect.value = preserveAreaId;
+      showToast("新美食已新增，现在可以继续添加下一条。");
+    }
+
     renderAll();
-    showToast("美食条目已保存。");
   }
 
   async function deleteSelectedFood() {
@@ -1180,6 +1226,7 @@
   }
 
   function fillFoodForm(food) {
+    state.foodEditorMode = "edit";
     state.editingFoodId = food.id;
     dom.editorAreaSelect.value = food.area_id;
     dom.foodNameInput.value = food.name;
@@ -1191,11 +1238,12 @@
     dom.foodHoursInput.value = food.business_hours || "";
     dom.foodMapInput.value = food.map_link || "";
     dom.foodNoteInput.value = food.note || "";
-    syncAreaFormWithSelection(food.area_id);
+    renderEditorState();
     renderInventory();
   }
 
   function clearFoodForm() {
+    state.foodEditorMode = "create";
     state.editingFoodId = "";
     dom.foodNameInput.value = "";
     dom.foodTagsInput.value = "";
@@ -1206,24 +1254,63 @@
     dom.foodHoursInput.value = "";
     dom.foodMapInput.value = "";
     dom.foodNoteInput.value = "";
+    renderEditorState();
     renderInventory();
   }
 
   function clearAreaForm() {
-    state.editingAreaId = "";
-    dom.areaNameInput.value = "";
-    dom.areaSortInput.value = "";
+    enterCreateAreaMode();
   }
 
   function syncAreaFormWithSelection(areaId) {
     const area = getAreaById(areaId);
     if (!area) {
-      clearAreaForm();
+      enterCreateAreaMode();
       return;
     }
+    enterEditAreaMode(area.id);
+  }
+
+  function enterEditAreaMode(areaId) {
+    const area = getAreaById(areaId);
+    if (!area) {
+      enterCreateAreaMode();
+      return;
+    }
+
+    state.areaEditorMode = "edit";
     state.editingAreaId = area.id;
     dom.areaNameInput.value = area.name;
     dom.areaSortInput.value = String(toNumber(area.sort_order, 0));
+    renderEditorState();
+  }
+
+  function enterCreateAreaMode() {
+    state.areaEditorMode = "create";
+    state.editingAreaId = "";
+    dom.areaNameInput.value = "";
+    dom.areaSortInput.value = "";
+    renderEditorState();
+  }
+
+  function enterCreateFoodMode(preferredAreaId) {
+    const areaId = preferredAreaId || dom.editorAreaSelect.value || dom.areaSelect.value || (state.areas[0] ? state.areas[0].id : "");
+    state.foodEditorMode = "create";
+    state.editingFoodId = "";
+    if (areaId) {
+      dom.editorAreaSelect.value = areaId;
+    }
+    dom.foodNameInput.value = "";
+    dom.foodTagsInput.value = "";
+    dom.foodMoodsInput.value = "";
+    dom.foodRatingInput.value = "3";
+    dom.foodWeightInput.value = "3";
+    dom.foodBudgetInput.value = "normal";
+    dom.foodHoursInput.value = "";
+    dom.foodMapInput.value = "";
+    dom.foodNoteInput.value = "";
+    renderEditorState();
+    renderInventory();
   }
 
   function exportCurrentData() {
