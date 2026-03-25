@@ -1,5 +1,5 @@
 window.DINNER_APP_CONFIG = {
-  useSupabase: false,
+  useSupabase: true,
   supabaseUrl: "https://ckysyclygetetamjnmkd.supabase.co",
   supabaseAnonKey: "sb_publishable_34mxNfbUxokctmS4c9Ezog_iRHjRmnh",
   localStorageKey: "cute-dinner-local-v3",
