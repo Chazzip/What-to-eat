@@ -182,10 +182,28 @@ body::after {
 .sub-card p,
 .auth-copy,
 .result-note,
-.timeline-empty {
+.timeline-empty,
+.editor-hint {
   margin: 0;
   color: var(--text-soft);
   line-height: 1.8;
+}
+
+.editor-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.editor-hint {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--line);
+  font-size: 0.93rem;
 }
 
 .hero-tags,
