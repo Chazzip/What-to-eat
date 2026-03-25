@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>今晚吃什么 · Supabase 版</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="page-shell">
+    <section class="hero card">
+      <div class="hero-copy">
+        <span class="eyebrow">Cute Dinner OS</span>
+        <h1>
+          今晚吃什么，
+          <span>交给会记忆、会筛选、会变可爱的版本。</span>
+        </h1>
+        <p>
+          这版已经按 GitHub Pages + Supabase 的部署思路重构：前端可外网访问，管理员可以在浏览器里直接维护地点、美食和元数据，抽签会参考最近记录、标签、心情和权重。
+        </p>
+        <div class="hero-tags">
+          <span>Supabase 持久化</span>
+          <span>管理员在线编辑</span>
+          <span>标签 / 心情筛选</span>
+          <span>避免最近重复</span>
+          <span>晚饭日记</span>
+        </div>
+      </div>
+
+      <div class="hero-side">
+        <div class="pet-badge">
+          <div class="pet-face" aria-hidden="true"><span>•ᴗ•</span></div>
+          <div>
+            <strong>Ruby 小饭搭子</strong>
+            <p>从“随机一下”升级成真正能长期维护的个人美食地图。</p>
+          </div>
+        </div>
+
+        <div class="status-grid">
+          <div class="status-pill">
+            <span>数据源</span>
+            <strong id="connectionBadge">初始化中</strong>
+          </div>
+          <div class="status-pill">
+            <span>管理员</span>
+            <strong id="adminBadge">未登录</strong>
+          </div>
+          <div class="status-pill">
+            <span>晚饭日记</span>
+            <strong id="savedMealsBadge">0 条</strong>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="dashboard">
+      <div class="main-column">
+        <article class="card picker-card">
+          <div class="section-head">
+            <div>
+              <h2>抽签面板</h2>
+              <p>区域、预算、标签和心情会一起参与筛选。</p>
+            </div>
+            <span class="tiny-badge" id="pickerBadge">准备就绪</span>
+          </div>
+
+          <div class="control-grid">
+            <label class="field-block">
+              <span>区域</span>
+              <select id="areaSelect"></select>
+            </label>
+
+            <label class="field-block">
+              <span>预算</span>
+              <select id="budgetSelect">
+                <option value="">都可以</option>
+                <option value="budget">省一点</option>
+                <option value="normal">常规预算</option>
+                <option value="treat">吃好一点</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="filter-block">
+            <div class="filter-title">
+              <h3>心情</h3>
+              <button class="ghost-btn" id="clearMoodButton" type="button">清空</button>
+            </div>
+            <div class="chip-group" id="moodChips"></div>
+          </div>
+
+          <div class="filter-block">
+            <div class="filter-title">
+              <h3>标签</h3>
+              <button class="ghost-btn" id="clearTagButton" type="button">清空</button>
+            </div>
+            <div class="chip-group" id="tagChips"></div>
+          </div>
+
+          <div class="toggle-row">
+            <label class="toggle">
+              <input id="avoidRecentToggle" type="checkbox" checked />
+              <span>尽量避开最近吃过或刚抽中过的</span>
+            </label>
+            <label class="toggle">
+              <input id="preferHighRatingToggle" type="checkbox" checked />
+              <span>优先更高评分和更想复吃的</span>
+            </label>
+          </div>
+
+          <div class="button-row">
+            <button class="primary-btn" id="decideButton" type="button">开始抽签</button>
+            <button class="secondary-btn" id="randomAreaButton" type="button">随机一个区域</button>
+            <button class="mint-btn" id="rerollButton" type="button">换一个结果</button>
+          </div>
+        </article>
+
+        <article class="card result-card">
+          <div class="section-head">
+            <div>
+              <h2>今晚结果</h2>
+              <p>滚动抽签后会停在一个最终推荐上。</p>
+            </div>
+            <span class="tiny-badge" id="resultStateBadge">等待开始</span>
+          </div>
+
+          <div class="result-stage">
+            <span class="result-area" id="resultArea">先选区域</span>
+            <strong class="result-food" id="resultFood">让晚饭自己出现</strong>
+            <p class="result-note" id="resultNote">如果你还没想法，先随机一个区域再抽。</p>
+            <div class="roulette-track" id="rouletteTrack"></div>
+          </div>
+
+          <div class="result-meta" id="resultMeta"></div>
+
+          <div class="log-panel">
+            <div class="log-fields">
+              <label class="field-block">
+                <span>这次体验分</span>
+                <select id="mealRatingInput">
+                  <option value="">不记录</option>
+                  <option value="5">5 分</option>
+                  <option value="4">4 分</option>
+                  <option value="3">3 分</option>
+                  <option value="2">2 分</option>
+                  <option value="1">1 分</option>
+                </select>
+              </label>
+              <label class="field-block grow">
+                <span>晚饭备注</span>
+                <input id="mealNoteInput" type="text" placeholder="例如：排队太久 / 适合下雨天 / 下次还想吃" />
+              </label>
+            </div>
+
+            <div class="button-row">
+              <button class="primary-btn" id="markEatenButton" type="button">记为真的吃了</button>
+              <button class="secondary-btn" id="favoriteButton" type="button">下次更常推荐</button>
+              <button class="ghost-strong-btn" id="deprioritizeButton" type="button">下次少推一点</button>
+            </div>
+          </div>
+        </article>
+
+        <article class="card history-card">
+          <div class="section-head">
+            <div>
+              <h2>晚饭日记</h2>
+              <p>管理员登录后记录的内容会永久保存在 Supabase。</p>
+            </div>
+          </div>
+          <div class="timeline" id="savedMealsList"></div>
+        </article>
+      </div>
+
+      <aside class="side-column">
+        <article class="card stats-card">
+          <div class="section-head">
+            <div>
+              <h2>数据概览</h2>
+              <p>实时显示当前数据集大小。</p>
+            </div>
+          </div>
+          <div class="stats-grid">
+            <div class="stat-box">
+              <strong id="areaCount">0</strong>
+              <span>区域</span>
+            </div>
+            <div class="stat-box">
+              <strong id="foodCount">0</strong>
+              <span>美食</span>
+            </div>
+            <div class="stat-box">
+              <strong id="mealLogCount">0</strong>
+              <span>晚饭日记</span>
+            </div>
+            <div class="stat-box">
+              <strong id="localHistoryCount">0</strong>
+              <span>本地抽签</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="card area-card">
+          <div class="section-head">
+            <div>
+              <h2>区域地图</h2>
+              <p>点一下就能切换抽签区域。</p>
+            </div>
+          </div>
+          <div class="pill-grid" id="areaMap"></div>
+        </article>
+
+        <article class="card history-card">
+          <div class="section-head">
+            <div>
+              <h2>本地最近抽签</h2>
+              <p>只保存在当前浏览器，用来做“避开最近重复”。</p>
+            </div>
+          </div>
+          <div class="timeline compact" id="localDrawHistory"></div>
+        </article>
+
+        <article class="card auth-card">
+          <div class="section-head">
+            <div>
+              <h2>管理员入口</h2>
+              <p>只建议你自己登录，匿名访客默认只读。</p>
+            </div>
+            <span class="tiny-badge" id="authHintBadge">只读模式</span>
+          </div>
+
+          <div class="auth-copy" id="authStatusText">还未连接管理员会话。</div>
+
+          <div class="auth-form" id="authForm">
+            <label class="field-block">
+              <span>邮箱</span>
+              <input id="authEmailInput" type="email" placeholder="管理员邮箱" />
+            </label>
+            <label class="field-block">
+              <span>密码</span>
+              <input id="authPasswordInput" type="password" placeholder="Supabase Auth 密码" />
+            </label>
+            <div class="button-row">
+              <button class="primary-btn" id="loginButton" type="button">登录管理员</button>
+              <button class="secondary-btn" id="logoutButton" type="button">退出登录</button>
+            </div>
+          </div>
+        </article>
+      </aside>
+    </section>
+
+    <section class="card manager-card">
+      <div class="section-head">
+        <div>
+          <h2>在线管理台</h2>
+          <p>这里负责维护区域、美食及其标签、心情、评分、预算、营业时间和导航链接。</p>
+        </div>
+        <div class="button-row tight">
+          <button class="secondary-btn" id="exportButton" type="button">导出 JSON</button>
+          <button class="ghost-strong-btn" id="resetLocalButton" type="button">重置本地回退数据</button>
+        </div>
+      </div>
+
+      <div class="manager-layout">
+        <section class="sub-card">
+          <h3>区域编辑</h3>
+          <div class="form-grid">
+            <label class="field-block">
+              <span>区域名称</span>
+              <input id="areaNameInput" type="text" placeholder="例如：五一广场 / 公司附近" />
+            </label>
+            <label class="field-block">
+              <span>排序值</span>
+              <input id="areaSortInput" type="number" min="0" step="1" placeholder="数字越小越靠前" />
+            </label>
+          </div>
+          <div class="button-row">
+            <button class="primary-btn" id="saveAreaButton" type="button">保存区域</button>
+            <button class="secondary-btn" id="clearAreaFormButton" type="button">清空区域表单</button>
+            <button class="ghost-strong-btn" id="deleteAreaButton" type="button">删除当前区域</button>
+          </div>
+        </section>
+
+        <section class="sub-card">
+          <h3>美食编辑</h3>
+          <div class="form-grid two-col">
+            <label class="field-block">
+              <span>所属区域</span>
+              <select id="editorAreaSelect"></select>
+            </label>
+            <label class="field-block">
+              <span>美食名称</span>
+              <input id="foodNameInput" type="text" placeholder="例如：螺蛳粉 / 煲仔饭 / 热卤" />
+            </label>
+            <label class="field-block">
+              <span>标签</span>
+              <input id="foodTagsInput" type="text" placeholder="逗号分隔，例如：重口, 小吃, 夜宵" />
+            </label>
+            <label class="field-block">
+              <span>适合心情</span>
+              <input id="foodMoodsInput" type="text" placeholder="逗号分隔，例如：快手解决, 约会感" />
+            </label>
+            <label class="field-block">
+              <span>个人评分</span>
+              <select id="foodRatingInput">
+                <option value="5">5 分</option>
+                <option value="4">4 分</option>
+                <option value="3" selected>3 分</option>
+                <option value="2">2 分</option>
+                <option value="1">1 分</option>
+              </select>
+            </label>
+            <label class="field-block">
+              <span>复吃权重</span>
+              <select id="foodWeightInput">
+                <option value="5">5 很想常吃</option>
+                <option value="4">4 比较常吃</option>
+                <option value="3" selected>3 正常</option>
+                <option value="2">2 偶尔</option>
+                <option value="1">1 少推</option>
+              </select>
+            </label>
+            <label class="field-block">
+              <span>预算层级</span>
+              <select id="foodBudgetInput">
+                <option value="budget">省一点</option>
+                <option value="normal" selected>常规预算</option>
+                <option value="treat">吃好一点</option>
+              </select>
+            </label>
+            <label class="field-block">
+              <span>营业时间</span>
+              <input id="foodHoursInput" type="text" placeholder="例如：11:00-22:00 / 晚上出摊" />
+            </label>
+            <label class="field-block full">
+              <span>导航链接</span>
+              <input id="foodMapInput" type="url" placeholder="高德 / 腾讯地图链接" />
+            </label>
+            <label class="field-block full">
+              <span>备注</span>
+              <textarea id="foodNoteInput" placeholder="例如：招牌是糖油粑粑、适合雨天、排队时间较长"></textarea>
+            </label>
+          </div>
+          <div class="button-row">
+            <button class="primary-btn" id="saveFoodButton" type="button">保存美食</button>
+            <button class="secondary-btn" id="clearFoodFormButton" type="button">清空美食表单</button>
+            <button class="ghost-strong-btn" id="deleteFoodButton" type="button">删除当前美食</button>
+          </div>
+        </section>
+      </div>
+
+      <section class="inventory-wrap">
+        <div class="section-head">
+          <div>
+            <h3>当前菜单库存</h3>
+            <p>点卡片即可回填到编辑器里继续修改。</p>
+          </div>
+        </div>
+        <div class="inventory-grid" id="inventoryList"></div>
+      </section>
+    </section>
+
+    <div class="toast" id="toast"></div>
+  </main>
+
+  <script src="./app-config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
