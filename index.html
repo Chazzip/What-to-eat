@@ -10,9 +10,9 @@
   <main class="page-shell">
     <section class="hero card hero-compact">
       <div class="hero-copy">
-        <span class="eyebrow">Dinner Picker</span>
+        <span class="eyebrow">What to eat?</span>
         <h1>What to eat?</h1>
-        <p>选一下，抽一下，去吃饭。</p>
+        <p>抽我抽我！</p>
       </div>
 
       <div class="hero-side hero-status-wrap">
@@ -46,7 +46,7 @@
             <div class="section-head">
               <div>
                 <h2>Pick</h2>
-                <p>先定范围，再抽一个今晚的答案。</p>
+                <p>先定范围，再抽一个这顿的答案。</p>
               </div>
               <span class="tiny-badge" id="pickerBadge">准备就绪</span>
             </div>
@@ -70,18 +70,10 @@
 
             <div class="filter-block">
               <div class="filter-title">
-                <h3>心情</h3>
-                <button class="ghost-btn" id="clearMoodButton" type="button">清空</button>
+                <h3>偏好</h3>
+                <button class="ghost-btn" id="clearPreferenceButton" type="button">清空</button>
               </div>
-              <div class="chip-group" id="moodChips"></div>
-            </div>
-
-            <div class="filter-block">
-              <div class="filter-title">
-                <h3>标签</h3>
-                <button class="ghost-btn" id="clearTagButton" type="button">清空</button>
-              </div>
-              <div class="chip-group" id="tagChips"></div>
+              <div class="chip-group" id="preferenceChips"></div>
             </div>
 
             <div class="toggle-row">
@@ -106,16 +98,15 @@
             <div class="section-head">
               <div>
                 <h2>Result</h2>
-                <p>抽到合适的就去吃，不合适就再来一轮。</p>
+                <p>抽到合适的就去吃，不合适就再来一次。</p>
               </div>
               <span class="tiny-badge" id="resultStateBadge">等待开始</span>
             </div>
 
             <div class="result-stage">
               <span class="result-area" id="resultArea">先选区域</span>
-              <strong class="result-food" id="resultFood">让晚饭自己出现</strong>
+              <strong class="result-food" id="resultFood">让这顿饭自己出现</strong>
               <p class="result-note" id="resultNote">如果没想法，先随机一个区域。</p>
-              <div class="roulette-track" id="rouletteTrack"></div>
             </div>
 
             <div class="result-meta" id="resultMeta"></div>
@@ -123,7 +114,7 @@
             <div class="log-panel">
               <div class="log-panel-head">
                 <h3>吃完再记一笔</h3>
-                <p>真的吃了再保存到日记。</p>
+                <p>真的吃了再保存。</p>
               </div>
               <div class="log-fields">
                 <label class="field-block">
@@ -180,16 +171,6 @@
             </div>
           </article>
 
-          <article class="card area-card">
-            <div class="section-head">
-              <div>
-                <h2>Areas</h2>
-                <p>点一下就切换到这个区域。</p>
-              </div>
-            </div>
-            <div class="pill-grid" id="areaMap"></div>
-          </article>
-
           <article class="card history-card">
             <div class="section-head">
               <div>
@@ -209,7 +190,7 @@
           <div class="section-head">
             <div>
               <h2>Journal</h2>
-              <p>这里记录真正吃过的那一顿。</p>
+              <p>这里记录真正吃过的这顿。</p>
             </div>
             <span class="tiny-badge" id="journalBadge">已记录</span>
           </div>
@@ -260,13 +241,13 @@
     <section class="app-view" id="manageView">
       <section class="manage-screen">
         <article class="card auth-card">
-          <div class="section-head">
-            <div>
-              <h2>Manage</h2>
-              <p>登录后可以维护区域、美食和记录。</p>
+            <div class="section-head">
+              <div>
+                <h2>Manage</h2>
+                <p>登录后可以维护区域和美食。</p>
+              </div>
+              <span class="tiny-badge" id="authHintBadge">只读模式</span>
             </div>
-            <span class="tiny-badge" id="authHintBadge">只读模式</span>
-          </div>
 
           <div class="auth-copy" id="authStatusText">还未连接管理员会话。</div>
 
@@ -336,7 +317,7 @@
                   <input id="foodTagsInput" type="text" placeholder="逗号分隔，例如：重口, 小吃, 夜宵" />
                 </label>
                 <label class="field-block">
-                  <span>适合心情</span>
+                  <span>适合场景</span>
                   <input id="foodMoodsInput" type="text" placeholder="逗号分隔，例如：快手解决, 约会感" />
                 </label>
                 <label class="field-block">

@@ -55,10 +55,8 @@
     journalBadge: byId("journalBadge"),
     areaSelect: byId("areaSelect"),
     budgetSelect: byId("budgetSelect"),
-    moodChips: byId("moodChips"),
-    tagChips: byId("tagChips"),
-    clearMoodButton: byId("clearMoodButton"),
-    clearTagButton: byId("clearTagButton"),
+    preferenceChips: byId("preferenceChips"),
+    clearPreferenceButton: byId("clearPreferenceButton"),
     avoidRecentToggle: byId("avoidRecentToggle"),
     preferHighRatingToggle: byId("preferHighRatingToggle"),
     decideButton: byId("decideButton"),
@@ -67,7 +65,6 @@
     resultArea: byId("resultArea"),
     resultFood: byId("resultFood"),
     resultNote: byId("resultNote"),
-    rouletteTrack: byId("rouletteTrack"),
     resultMeta: byId("resultMeta"),
     mealRatingInput: byId("mealRatingInput"),
     mealNoteInput: byId("mealNoteInput"),
@@ -87,7 +84,6 @@
     manageFoodCount: byId("manageFoodCount"),
     manageMealLogCount: byId("manageMealLogCount"),
     manageLocalHistoryCount: byId("manageLocalHistoryCount"),
-    areaMap: byId("areaMap"),
     manageAreaMap: byId("manageAreaMap"),
     localDrawHistory: byId("localDrawHistory"),
     journalLocalDrawHistory: byId("journalLocalDrawHistory"),
@@ -137,8 +133,7 @@
     foods: [],
     savedMeals: [],
     localDraws: loadLocalDrawHistory(),
-    selectedMood: "",
-    selectedTag: "",
+    selectedPreference: "",
     currentResultFoodId: "",
     currentResultAreaId: "",
     editingAreaId: "",
@@ -172,12 +167,8 @@
     dom.budgetSelect.addEventListener("change", renderAll);
     dom.avoidRecentToggle.addEventListener("change", renderResultActions);
     dom.preferHighRatingToggle.addEventListener("change", renderResultActions);
-    dom.clearMoodButton.addEventListener("click", () => {
-      state.selectedMood = "";
-      renderAll();
-    });
-    dom.clearTagButton.addEventListener("click", () => {
-      state.selectedTag = "";
+    dom.clearPreferenceButton.addEventListener("click", () => {
+      state.selectedPreference = "";
       renderAll();
     });
     dom.decideButton.addEventListener("click", () => decideDinner(false));
@@ -401,13 +392,8 @@
   }
 
   function renderFilters() {
-    renderChipGroup(dom.moodChips, buildMoodOptions(), state.selectedMood, function (value) {
-      state.selectedMood = state.selectedMood === value ? "" : value;
-      renderAll();
-    });
-
-    renderChipGroup(dom.tagChips, buildTagOptions(), state.selectedTag, function (value) {
-      state.selectedTag = state.selectedTag === value ? "" : value;
+    renderChipGroup(dom.preferenceChips, buildPreferenceOptions(), state.selectedPreference, function (value) {
+      state.selectedPreference = state.selectedPreference === value ? "" : value;
       renderAll();
     });
 
@@ -451,30 +437,24 @@
   }
 
   function renderAreaMap() {
-    dom.areaMap.innerHTML = "";
     dom.manageAreaMap.innerHTML = "";
 
     state.areas.forEach((area) => {
-      const appendMapButton = (container) => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "area-pill" + (dom.areaSelect.value === area.id ? " active" : "");
-        button.textContent = area.name + " · " + getFoodsByArea(area.id).length;
-        button.addEventListener("click", function () {
-          dom.areaSelect.value = area.id;
-          dom.editorAreaSelect.value = area.id;
-          enterEditAreaMode(area.id);
-          if (state.foodEditorMode === "create") {
-            enterCreateFoodMode(area.id);
-          }
-          renderAreaMap();
-          renderInventory();
-        });
-        container.appendChild(button);
-      };
-
-      appendMapButton(dom.areaMap);
-      appendMapButton(dom.manageAreaMap);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "area-pill" + (dom.areaSelect.value === area.id ? " active" : "");
+      button.textContent = area.name + " · " + getFoodsByArea(area.id).length;
+      button.addEventListener("click", function () {
+        dom.areaSelect.value = area.id;
+        dom.editorAreaSelect.value = area.id;
+        enterEditAreaMode(area.id);
+        if (state.foodEditorMode === "create") {
+          enterCreateFoodMode(area.id);
+        }
+        renderAreaMap();
+        renderInventory();
+      });
+      dom.manageAreaMap.appendChild(button);
     });
   }
 
@@ -492,8 +472,8 @@
       if (meal.user_rating) {
         meta.appendChild(makeMetaChip("体验 " + meal.user_rating + " 分"));
       }
-      if (meal.mood) {
-        meta.appendChild(makeMetaChip("心情 " + meal.mood));
+      if (meal.selected_tags[0]) {
+        meta.appendChild(makeMetaChip("偏好 " + meal.selected_tags[0]));
       }
 
       const note = document.createElement("p");
@@ -504,7 +484,7 @@
       row.appendChild(meta);
       row.appendChild(note);
       return row;
-    }, "还没有保存过晚饭日记。");
+    }, "还没有保存过记录。");
   }
 
   function renderLocalDrawHistory() {
@@ -518,11 +498,8 @@
       const meta = document.createElement("div");
       meta.className = "timeline-row";
       meta.appendChild(makeMetaChip(formatDateTime(entry.created_at)));
-      if (entry.mood) {
-        meta.appendChild(makeMetaChip("心情 " + entry.mood));
-      }
-      if (entry.tag) {
-        meta.appendChild(makeMetaChip("标签 " + entry.tag));
+      if (entry.preference) {
+        meta.appendChild(makeMetaChip("偏好 " + entry.preference));
       }
 
       row.appendChild(title);
@@ -663,8 +640,8 @@
     const resultFood = getFoodById(state.currentResultFoodId);
     if (!resultFood) {
       dom.resultArea.textContent = dom.areaSelect.value ? "当前区域：" + getAreaName(dom.areaSelect.value) : "先选一个区域";
-      dom.resultFood.textContent = "让晚饭自己出现";
-      dom.resultNote.textContent = "标签、心情和预算会一起决定候选池。";
+      dom.resultFood.textContent = "让这顿饭自己出现";
+      dom.resultNote.textContent = "区域、预算和偏好会一起决定结果。";
       dom.resultMeta.innerHTML = "";
       dom.resultStateBadge.textContent = "等待开始";
       renderResultActions();
@@ -672,7 +649,7 @@
     }
 
     const areaName = getAreaName(resultFood.area_id);
-    dom.resultArea.textContent = "今晚锁定：" + areaName;
+    dom.resultArea.textContent = "这次锁定：" + areaName;
     dom.resultFood.textContent = resultFood.name;
     dom.resultNote.textContent = resultFood.note || "没有备注，这次就纯凭直觉出发。";
     dom.resultStateBadge.textContent = "结果已揭晓";
@@ -775,13 +752,12 @@
     const candidates = buildCandidates(randomAreaFirst);
     if (!candidates.length) {
       dom.resultStateBadge.textContent = "没有候选";
-      dom.resultNote.textContent = "当前筛选太严格了，试试清空心情、标签或预算。";
+      dom.resultNote.textContent = "当前筛选太严格了，试试清空偏好或预算。";
       showToast("当前条件下没有可抽取的美食。");
       return;
     }
 
     setRollingState(true);
-    const displayNames = [];
     let counter = 0;
     const maxRolls = Math.min(Math.max(candidates.length + 10, 14), 20);
     let finalChoice = candidates[0].food;
@@ -789,16 +765,11 @@
     state.rollingTimer = window.setInterval(function () {
       const choice = weightedPick(candidates);
       finalChoice = choice.food;
-      displayNames.unshift(finalChoice.name);
-      if (displayNames.length > 6) {
-        displayNames.pop();
-      }
 
       dom.resultArea.textContent = "目标区域：" + getAreaName(finalChoice.area_id);
       dom.resultFood.textContent = finalChoice.name;
       dom.resultNote.textContent = "让纠结先晃几下。";
       dom.resultStateBadge.textContent = "随机中...";
-      renderRoulette(displayNames);
 
       counter += 1;
       if (counter >= maxRolls) {
@@ -828,8 +799,7 @@
     }
 
     const selectedBudget = dom.budgetSelect.value;
-    const selectedMood = state.selectedMood;
-    const selectedTag = state.selectedTag;
+    const selectedPreference = state.selectedPreference;
     const recentIds = getRecentFoodIds();
     const preferHighRating = dom.preferHighRatingToggle.checked;
     const avoidRecent = dom.avoidRecentToggle.checked;
@@ -841,10 +811,7 @@
       if (selectedBudget && food.price_level !== selectedBudget) {
         return false;
       }
-      if (selectedMood && !getFoodMoods(food).includes(selectedMood)) {
-        return false;
-      }
-      if (selectedTag && !getFoodTags(food).includes(selectedTag)) {
+      if (selectedPreference && !matchesPreference(food, selectedPreference)) {
         return false;
       }
       return true;
@@ -858,11 +825,8 @@
         weight += toNumber(food.revisit_weight, 3);
       }
 
-      if (selectedMood && getFoodMoods(food).includes(selectedMood)) {
-        weight += 2.8;
-      }
-      if (selectedTag && getFoodTags(food).includes(selectedTag)) {
-        weight += 2.2;
+      if (selectedPreference && matchesPreference(food, selectedPreference)) {
+        weight += 2.6;
       }
 
       if (avoidRecent && recentIds.includes(food.id)) {
@@ -885,21 +849,7 @@
     state.currentResultAreaId = food.area_id;
     pushLocalDraw(food);
     renderResult();
-    showToast("今晚候选已生成：" + food.name);
-  }
-
-  function renderRoulette(names) {
-    dom.rouletteTrack.innerHTML = "";
-    names.forEach((name, index) => {
-      const pill = document.createElement("span");
-      pill.className = "pill";
-      pill.textContent = name;
-      if (index === 0) {
-        pill.style.background = "rgba(255, 241, 228, 0.94)";
-        pill.style.color = "var(--accent-deep)";
-      }
-      dom.rouletteTrack.appendChild(pill);
-    });
+    showToast("这次抽中了：" + food.name);
   }
 
   function setRollingState(isRolling) {
@@ -917,7 +867,7 @@
     }
 
     if (!canEditRemote()) {
-      showToast("当前是只读模式，登录管理员后才能保存晚饭日记。");
+      showToast("当前是只读模式，登录后才能保存记录。");
       return;
     }
 
@@ -928,8 +878,8 @@
       area_id: food.area_id,
       food_name: food.name,
       area_name: getAreaName(food.area_id),
-      mood: state.selectedMood,
-      selected_tags: state.selectedTag ? [state.selectedTag] : [],
+      mood: "",
+      selected_tags: state.selectedPreference ? [state.selectedPreference] : [],
       status: "eaten",
       user_rating: dom.mealRatingInput.value ? Number(dom.mealRatingInput.value) : null,
       note: dom.mealNoteInput.value.trim(),
@@ -940,7 +890,7 @@
     if (state.mode === "supabase" && CONFIG.persistMealLogsToServer) {
       const { error: insertError } = await state.supabase.from("meal_logs").insert(mealPayload);
       if (insertError) {
-        showToast("保存晚饭日记失败：" + insertError.message);
+        showToast("保存记录失败：" + insertError.message);
         return;
       }
 
@@ -980,7 +930,7 @@
     dom.mealRatingInput.value = "";
     dom.mealNoteInput.value = "";
     renderAll();
-    showToast("这次晚饭已经写进日记里了。");
+    showToast("这次记录已经保存。");
   }
 
   async function adjustCurrentFoodWeight(delta) {
@@ -1422,8 +1372,7 @@
       food_name: food.name,
       area_id: food.area_id,
       area_name: getAreaName(food.area_id),
-      mood: state.selectedMood,
-      tag: state.selectedTag,
+      preference: state.selectedPreference,
       created_at: new Date().toISOString()
     };
 
@@ -1451,20 +1400,14 @@
     return count ? "当前有 " + count + " 个候选" : "当前没有候选";
   }
 
-  function buildTagOptions() {
-    const tags = new Set(DEFAULT_TAGS);
+  function buildPreferenceOptions() {
+    const options = new Set(DEFAULT_TAGS);
+    DEFAULT_MOODS.forEach((item) => options.add(item));
     state.foods.forEach((food) => {
-      getFoodTags(food).forEach((tag) => tags.add(tag));
+      getFoodTags(food).forEach((tag) => options.add(tag));
+      getFoodMoods(food).forEach((mood) => options.add(mood));
     });
-    return Array.from(tags);
-  }
-
-  function buildMoodOptions() {
-    const moods = new Set(DEFAULT_MOODS);
-    state.foods.forEach((food) => {
-      getFoodMoods(food).forEach((mood) => moods.add(mood));
-    });
-    return Array.from(moods);
+    return Array.from(options);
   }
 
   function canEditRemote() {
@@ -1494,6 +1437,10 @@
 
   function getFoodMoods(food) {
     return normalizeStringArray(food.moods).length ? normalizeStringArray(food.moods) : inferMoodsFromName(food.name);
+  }
+
+  function matchesPreference(food, preference) {
+    return getFoodTags(food).includes(preference) || getFoodMoods(food).includes(preference);
   }
 
   function loadLocalStore() {
