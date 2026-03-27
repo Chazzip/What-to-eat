@@ -56,16 +56,6 @@
                 <span>区域</span>
                 <select id="areaSelect"></select>
               </label>
-
-              <label class="field-block">
-                <span>预算</span>
-                <select id="budgetSelect">
-                  <option value="">都可以</option>
-                  <option value="budget">省一点</option>
-                  <option value="normal">常规预算</option>
-                  <option value="treat">吃好一点</option>
-                </select>
-              </label>
             </div>
 
             <div class="filter-block">
@@ -88,9 +78,8 @@
             </div>
 
             <div class="button-row">
-              <button class="primary-btn" id="decideButton" type="button">开始抽签</button>
-              <button class="secondary-btn" id="randomAreaButton" type="button">随机区域</button>
-              <button class="mint-btn" id="rerollButton" type="button">换一个</button>
+              <button class="primary-btn" id="decideButton" type="button">抽一个</button>
+              <button class="mint-btn" id="rerollButton" type="button">再抽一次</button>
             </div>
           </article>
 
@@ -106,7 +95,7 @@
             <div class="result-stage">
               <span class="result-area" id="resultArea">先选区域</span>
               <strong class="result-food" id="resultFood">让这顿饭自己出现</strong>
-              <p class="result-note" id="resultNote">如果没想法，先随机一个区域。</p>
+              <p class="result-note" id="resultNote">选好范围后，直接抽一个答案。</p>
             </div>
 
             <div class="result-meta" id="resultMeta"></div>
@@ -121,11 +110,11 @@
                   <span>体验分</span>
                   <select id="mealRatingInput">
                     <option value="">不记录</option>
-                    <option value="5">5 分</option>
-                    <option value="4">4 分</option>
-                    <option value="3">3 分</option>
-                    <option value="2">2 分</option>
-                    <option value="1">1 分</option>
+                    <option value="5">夯爆了</option>
+                    <option value="4">顶级</option>
+                    <option value="3">人上人</option>
+                    <option value="2">NPC</option>
+                    <option value="1">拉完了</option>
                   </select>
                 </label>
                 <label class="field-block grow">
@@ -323,11 +312,11 @@
                 <label class="field-block">
                   <span>个人评分</span>
                   <select id="foodRatingInput">
-                    <option value="5">5 分</option>
-                    <option value="4">4 分</option>
-                    <option value="3" selected>3 分</option>
-                    <option value="2">2 分</option>
-                    <option value="1">1 分</option>
+                    <option value="5">夯爆了</option>
+                    <option value="4">顶级</option>
+                    <option value="3" selected>人上人</option>
+                    <option value="2">NPC</option>
+                    <option value="1">拉完了</option>
                   </select>
                 </label>
                 <label class="field-block">
@@ -338,14 +327,6 @@
                     <option value="3" selected>3 正常</option>
                     <option value="2">2 偶尔</option>
                     <option value="1">1 少推</option>
-                  </select>
-                </label>
-                <label class="field-block">
-                  <span>预算层级</span>
-                  <select id="foodBudgetInput">
-                    <option value="budget">省一点</option>
-                    <option value="normal" selected>常规预算</option>
-                    <option value="treat">吃好一点</option>
                   </select>
                 </label>
                 <label class="field-block">

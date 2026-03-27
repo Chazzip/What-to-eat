@@ -16,10 +16,12 @@
     window.DINNER_APP_CONFIG || {}
   );
 
-  const PRICE_LABELS = {
-    budget: "省一点",
-    normal: "常规预算",
-    treat: "吃好一点"
+  const RATING_LABELS = {
+    1: "拉完了",
+    2: "NPC",
+    3: "人上人",
+    4: "顶级",
+    5: "夯爆了"
   };
 
   const DEFAULT_TAGS = ["粉面", "米饭", "甜口", "小吃", "正餐", "夜宵", "热卤", "香口", "重口"];
@@ -54,13 +56,11 @@
     resultStateBadge: byId("resultStateBadge"),
     journalBadge: byId("journalBadge"),
     areaSelect: byId("areaSelect"),
-    budgetSelect: byId("budgetSelect"),
     preferenceChips: byId("preferenceChips"),
     clearPreferenceButton: byId("clearPreferenceButton"),
     avoidRecentToggle: byId("avoidRecentToggle"),
     preferHighRatingToggle: byId("preferHighRatingToggle"),
     decideButton: byId("decideButton"),
-    randomAreaButton: byId("randomAreaButton"),
     rerollButton: byId("rerollButton"),
     resultArea: byId("resultArea"),
     resultFood: byId("resultFood"),
@@ -111,7 +111,6 @@
     foodMoodsInput: byId("foodMoodsInput"),
     foodRatingInput: byId("foodRatingInput"),
     foodWeightInput: byId("foodWeightInput"),
-    foodBudgetInput: byId("foodBudgetInput"),
     foodHoursInput: byId("foodHoursInput"),
     foodMapInput: byId("foodMapInput"),
     foodNoteInput: byId("foodNoteInput"),
@@ -164,15 +163,13 @@
       renderInventory();
     });
 
-    dom.budgetSelect.addEventListener("change", renderAll);
     dom.avoidRecentToggle.addEventListener("change", renderResultActions);
     dom.preferHighRatingToggle.addEventListener("change", renderResultActions);
     dom.clearPreferenceButton.addEventListener("click", () => {
       state.selectedPreference = "";
       renderAll();
     });
-    dom.decideButton.addEventListener("click", () => decideDinner(false));
-    dom.randomAreaButton.addEventListener("click", () => decideDinner(true));
+    dom.decideButton.addEventListener("click", () => decideDinner());
     dom.rerollButton.addEventListener("click", () => rerollCurrentArea());
     dom.markEatenButton.addEventListener("click", markCurrentAsEaten);
     dom.favoriteButton.addEventListener("click", () => adjustCurrentFoodWeight(1));
@@ -470,7 +467,7 @@
       meta.className = "timeline-row";
       meta.appendChild(makeMetaChip(formatDateTime(meal.eaten_at || meal.created_at)));
       if (meal.user_rating) {
-        meta.appendChild(makeMetaChip("体验 " + meal.user_rating + " 分"));
+        meta.appendChild(makeMetaChip("体验 " + formatRatingLabel(meal.user_rating)));
       }
       if (meal.selected_tags[0]) {
         meta.appendChild(makeMetaChip("偏好 " + meal.selected_tags[0]));
@@ -565,14 +562,13 @@
         titleWrap.appendChild(area);
         head.appendChild(titleWrap);
 
-        const ratingChip = makeMetaChip("评分 " + toNumber(food.rating, 3) + " / 权重 " + toNumber(food.revisit_weight, 3));
+        const ratingChip = makeMetaChip("评分 " + formatRatingLabel(food.rating) + " / 权重 " + toNumber(food.revisit_weight, 3));
         head.appendChild(ratingChip);
 
         const meta = document.createElement("div");
         meta.className = "result-meta";
         getFoodTags(food).slice(0, 4).forEach((tag) => meta.appendChild(makeMetaChip(tag)));
         getFoodMoods(food).slice(0, 2).forEach((mood) => meta.appendChild(makeMetaChip(mood)));
-        meta.appendChild(makeMetaChip(PRICE_LABELS[food.price_level] || "常规预算"));
 
         const note = document.createElement("p");
         note.textContent = food.note || "还没有备注。";
@@ -641,7 +637,7 @@
     if (!resultFood) {
       dom.resultArea.textContent = dom.areaSelect.value ? "当前区域：" + getAreaName(dom.areaSelect.value) : "先选一个区域";
       dom.resultFood.textContent = "让这顿饭自己出现";
-      dom.resultNote.textContent = "区域、预算和偏好会一起决定结果。";
+      dom.resultNote.textContent = "区域和偏好会一起决定结果。";
       dom.resultMeta.innerHTML = "";
       dom.resultStateBadge.textContent = "等待开始";
       renderResultActions();
@@ -655,8 +651,7 @@
     dom.resultStateBadge.textContent = "结果已揭晓";
 
     dom.resultMeta.innerHTML = "";
-    dom.resultMeta.appendChild(makeMetaChip(PRICE_LABELS[resultFood.price_level] || "常规预算"));
-    dom.resultMeta.appendChild(makeMetaChip("评分 " + toNumber(resultFood.rating, 3)));
+    dom.resultMeta.appendChild(makeMetaChip("评分 " + formatRatingLabel(resultFood.rating)));
     dom.resultMeta.appendChild(makeMetaChip("复吃权重 " + toNumber(resultFood.revisit_weight, 3)));
 
     if (resultFood.business_hours) {
@@ -692,6 +687,7 @@
     dom.markEatenButton.disabled = !hasResult || !canPersist;
     dom.favoriteButton.disabled = !hasResult || !canPersist;
     dom.deprioritizeButton.disabled = !hasResult || !canPersist;
+    dom.rerollButton.disabled = !hasResult;
   }
 
   function renderEditorState() {
@@ -710,7 +706,6 @@
       dom.foodMoodsInput,
       dom.foodRatingInput,
       dom.foodWeightInput,
-      dom.foodBudgetInput,
       dom.foodHoursInput,
       dom.foodMapInput,
       dom.foodNoteInput,
@@ -746,13 +741,16 @@
       : "当前会新增一条新的美食。点下面库存卡片后，才会进入编辑并覆盖那一条。";
     dom.saveFoodButton.textContent = state.foodEditorMode === "edit" ? "保存这条修改" : "新增这条美食";
     dom.deleteFoodButton.disabled = !editable || state.foodEditorMode !== "edit" || !currentFood;
+    if (!state.currentResultFoodId) {
+      dom.rerollButton.disabled = true;
+    }
   }
 
-  async function decideDinner(randomAreaFirst) {
-    const candidates = buildCandidates(randomAreaFirst);
+  async function decideDinner() {
+    const candidates = buildCandidates();
     if (!candidates.length) {
       dom.resultStateBadge.textContent = "没有候选";
-      dom.resultNote.textContent = "当前筛选太严格了，试试清空偏好或预算。";
+      dom.resultNote.textContent = "当前筛选太严格了，试试清空偏好或切换区域。";
       showToast("当前条件下没有可抽取的美食。");
       return;
     }
@@ -782,23 +780,15 @@
   }
 
   function rerollCurrentArea() {
-    if (!dom.areaSelect.value && state.currentResultAreaId) {
-      dom.areaSelect.value = state.currentResultAreaId;
+    if (!state.currentResultFoodId) {
+      return;
     }
-    decideDinner(false);
+    decideDinner();
   }
 
-  function buildCandidates(randomAreaFirst) {
+  function buildCandidates() {
     let areaId = dom.areaSelect.value;
-    if (randomAreaFirst) {
-      const randomArea = pickRandom(state.areas);
-      areaId = randomArea ? randomArea.id : "";
-      dom.areaSelect.value = areaId;
-      dom.editorAreaSelect.value = areaId;
-      syncAreaFormWithSelection(areaId);
-    }
 
-    const selectedBudget = dom.budgetSelect.value;
     const selectedPreference = state.selectedPreference;
     const recentIds = getRecentFoodIds();
     const preferHighRating = dom.preferHighRatingToggle.checked;
@@ -806,9 +796,6 @@
 
     const filtered = state.foods.filter((food) => {
       if (areaId && food.area_id !== areaId) {
-        return false;
-      }
-      if (selectedBudget && food.price_level !== selectedBudget) {
         return false;
       }
       if (selectedPreference && !matchesPreference(food, selectedPreference)) {
@@ -854,8 +841,7 @@
 
   function setRollingState(isRolling) {
     dom.decideButton.disabled = isRolling;
-    dom.randomAreaButton.disabled = isRolling;
-    dom.rerollButton.disabled = isRolling;
+    dom.rerollButton.disabled = isRolling || !state.currentResultFoodId;
     dom.pickerBadge.textContent = isRolling ? "随机中..." : buildCandidateSummaryText();
   }
 
@@ -1139,7 +1125,7 @@
       moods: parseTagList(dom.foodMoodsInput.value),
       rating: Number(dom.foodRatingInput.value),
       revisit_weight: Number(dom.foodWeightInput.value),
-      price_level: dom.foodBudgetInput.value,
+      price_level: getFoodById(state.editingFoodId)?.price_level || "normal",
       business_hours: dom.foodHoursInput.value.trim(),
       map_link: dom.foodMapInput.value.trim(),
       note: dom.foodNoteInput.value.trim(),
@@ -1244,7 +1230,6 @@
     dom.foodMoodsInput.value = (food.moods || []).join(", ");
     dom.foodRatingInput.value = String(toNumber(food.rating, 3));
     dom.foodWeightInput.value = String(toNumber(food.revisit_weight, 3));
-    dom.foodBudgetInput.value = food.price_level || "normal";
     dom.foodHoursInput.value = food.business_hours || "";
     dom.foodMapInput.value = food.map_link || "";
     dom.foodNoteInput.value = food.note || "";
@@ -1260,7 +1245,6 @@
     dom.foodMoodsInput.value = "";
     dom.foodRatingInput.value = "3";
     dom.foodWeightInput.value = "3";
-    dom.foodBudgetInput.value = "normal";
     dom.foodHoursInput.value = "";
     dom.foodMapInput.value = "";
     dom.foodNoteInput.value = "";
@@ -1315,7 +1299,6 @@
     dom.foodMoodsInput.value = "";
     dom.foodRatingInput.value = "3";
     dom.foodWeightInput.value = "3";
-    dom.foodBudgetInput.value = "normal";
     dom.foodHoursInput.value = "";
     dom.foodMapInput.value = "";
     dom.foodNoteInput.value = "";
@@ -1396,7 +1379,7 @@
   }
 
   function buildCandidateSummaryText() {
-    const count = buildCandidates(false).length;
+    const count = buildCandidates().length;
     return count ? "当前有 " + count + " 个候选" : "当前没有候选";
   }
 
@@ -1699,6 +1682,10 @@
       hour: "2-digit",
       minute: "2-digit"
     }).format(new Date(value));
+  }
+
+  function formatRatingLabel(value) {
+    return RATING_LABELS[toNumber(value, 3)] || RATING_LABELS[3];
   }
 
   function showToast(message) {
