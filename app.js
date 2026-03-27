@@ -44,8 +44,15 @@
     connectionBadge: byId("connectionBadge"),
     adminBadge: byId("adminBadge"),
     savedMealsBadge: byId("savedMealsBadge"),
+    discoverTab: byId("discoverTab"),
+    journalTab: byId("journalTab"),
+    manageTab: byId("manageTab"),
+    discoverView: byId("discoverView"),
+    journalView: byId("journalView"),
+    manageView: byId("manageView"),
     pickerBadge: byId("pickerBadge"),
     resultStateBadge: byId("resultStateBadge"),
+    journalBadge: byId("journalBadge"),
     areaSelect: byId("areaSelect"),
     budgetSelect: byId("budgetSelect"),
     moodChips: byId("moodChips"),
@@ -72,8 +79,18 @@
     foodCount: byId("foodCount"),
     mealLogCount: byId("mealLogCount"),
     localHistoryCount: byId("localHistoryCount"),
+    journalAreaCount: byId("journalAreaCount"),
+    journalFoodCount: byId("journalFoodCount"),
+    journalMealLogCount: byId("journalMealLogCount"),
+    journalLocalHistoryCount: byId("journalLocalHistoryCount"),
+    manageAreaCount: byId("manageAreaCount"),
+    manageFoodCount: byId("manageFoodCount"),
+    manageMealLogCount: byId("manageMealLogCount"),
+    manageLocalHistoryCount: byId("manageLocalHistoryCount"),
     areaMap: byId("areaMap"),
+    manageAreaMap: byId("manageAreaMap"),
     localDrawHistory: byId("localDrawHistory"),
+    journalLocalDrawHistory: byId("journalLocalDrawHistory"),
     authHintBadge: byId("authHintBadge"),
     authStatusText: byId("authStatusText"),
     authEmailInput: byId("authEmailInput"),
@@ -128,6 +145,7 @@
     editingFoodId: "",
     areaEditorMode: "create",
     foodEditorMode: "create",
+    activeView: "discover",
     rollingTimer: null,
     toastTimer: null
   };
@@ -183,6 +201,9 @@
     dom.editorAreaSelect.addEventListener("change", () => {
       renderInventory();
     });
+    dom.discoverTab.addEventListener("click", () => setActiveView("discover"));
+    dom.journalTab.addEventListener("click", () => setActiveView("journal"));
+    dom.manageTab.addEventListener("click", () => setActiveView("manage"));
   }
 
   async function setupSupabase() {
@@ -309,6 +330,7 @@
 
   function renderAll() {
     renderConnectionState();
+    renderActiveView();
     renderSelectOptions();
     renderFilters();
     renderStats();
@@ -323,15 +345,30 @@
 
   function renderConnectionState() {
     const modeText = state.mode === "supabase"
-      ? "Supabase 在线"
+      ? "在线"
       : state.mode === "fallback"
-        ? "本地回退"
-        : "本地模式";
+        ? "回退中"
+        : "本地";
 
     dom.connectionBadge.textContent = modeText;
-    dom.adminBadge.textContent = state.isAdmin ? "管理员已登录" : "未登录";
+    dom.adminBadge.textContent = state.isAdmin ? "可编辑" : "只读";
     dom.savedMealsBadge.textContent = state.savedMeals.length + " 条";
     dom.authHintBadge.textContent = canEditRemote() ? "可编辑" : "只读模式";
+  }
+
+  function renderActiveView() {
+    const map = {
+      discover: { tab: dom.discoverTab, view: dom.discoverView },
+      journal: { tab: dom.journalTab, view: dom.journalView },
+      manage: { tab: dom.manageTab, view: dom.manageView }
+    };
+
+    Object.keys(map).forEach((key) => {
+      const isActive = state.activeView === key;
+      map[key].tab.classList[isActive ? "add" : "remove"]("active");
+      map[key].tab.setAttribute("aria-selected", isActive ? "true" : "false");
+      map[key].view.classList[isActive ? "add" : "remove"]("active");
+    });
   }
 
   function renderSelectOptions() {
@@ -393,31 +430,51 @@
   }
 
   function renderStats() {
-    dom.areaCount.textContent = String(state.areas.length);
-    dom.foodCount.textContent = String(state.foods.length);
-    dom.mealLogCount.textContent = String(state.savedMeals.length);
-    dom.localHistoryCount.textContent = String(state.localDraws.length);
+    const areaCount = String(state.areas.length);
+    const foodCount = String(state.foods.length);
+    const mealCount = String(state.savedMeals.length);
+    const localCount = String(state.localDraws.length);
+
+    dom.areaCount.textContent = areaCount;
+    dom.foodCount.textContent = foodCount;
+    dom.mealLogCount.textContent = mealCount;
+    dom.localHistoryCount.textContent = localCount;
+    dom.journalAreaCount.textContent = areaCount;
+    dom.journalFoodCount.textContent = foodCount;
+    dom.journalMealLogCount.textContent = mealCount;
+    dom.journalLocalHistoryCount.textContent = localCount;
+    dom.manageAreaCount.textContent = areaCount;
+    dom.manageFoodCount.textContent = foodCount;
+    dom.manageMealLogCount.textContent = mealCount;
+    dom.manageLocalHistoryCount.textContent = localCount;
+    dom.journalBadge.textContent = mealCount + " 条";
   }
 
   function renderAreaMap() {
     dom.areaMap.innerHTML = "";
+    dom.manageAreaMap.innerHTML = "";
 
     state.areas.forEach((area) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "area-pill" + (dom.areaSelect.value === area.id ? " active" : "");
-      button.textContent = area.name + " · " + getFoodsByArea(area.id).length;
-      button.addEventListener("click", function () {
-        dom.areaSelect.value = area.id;
-        dom.editorAreaSelect.value = area.id;
-        enterEditAreaMode(area.id);
-        if (state.foodEditorMode === "create") {
-          enterCreateFoodMode(area.id);
-        }
-        renderAreaMap();
-        renderInventory();
-      });
-      dom.areaMap.appendChild(button);
+      const appendMapButton = (container) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "area-pill" + (dom.areaSelect.value === area.id ? " active" : "");
+        button.textContent = area.name + " · " + getFoodsByArea(area.id).length;
+        button.addEventListener("click", function () {
+          dom.areaSelect.value = area.id;
+          dom.editorAreaSelect.value = area.id;
+          enterEditAreaMode(area.id);
+          if (state.foodEditorMode === "create") {
+            enterCreateFoodMode(area.id);
+          }
+          renderAreaMap();
+          renderInventory();
+        });
+        container.appendChild(button);
+      };
+
+      appendMapButton(dom.areaMap);
+      appendMapButton(dom.manageAreaMap);
     });
   }
 
@@ -451,7 +508,7 @@
   }
 
   function renderLocalDrawHistory() {
-    renderTimeline(dom.localDrawHistory, state.localDraws, function (entry) {
+    const factory = function (entry) {
       const row = document.createElement("div");
       row.className = "timeline-item";
 
@@ -471,7 +528,10 @@
       row.appendChild(title);
       row.appendChild(meta);
       return row;
-    }, "本地还没有抽签记录。");
+    };
+
+    renderTimeline(dom.localDrawHistory, state.localDraws, factory, "还没有抽中过。");
+    renderTimeline(dom.journalLocalDrawHistory, state.localDraws, factory, "还没有抽中过。");
   }
 
   function renderTimeline(container, items, factory, emptyText) {
@@ -578,7 +638,7 @@
 
   function renderAuthState() {
     if (state.mode !== "supabase") {
-      dom.authStatusText.textContent = "当前未启用 Supabase，所有编辑都只会保存到本地浏览器。";
+      dom.authStatusText.textContent = "当前是本地模式。这里的修改只保存在当前浏览器。";
       dom.loginButton.disabled = true;
       dom.logoutButton.disabled = true;
       return;
@@ -588,13 +648,13 @@
     dom.logoutButton.disabled = false;
 
     if (state.session && state.session.user) {
-      const prefix = state.isAdmin ? "已登录管理员：" : "已登录，但当前账号不在管理员名单：";
+      const prefix = state.isAdmin ? "当前账号可编辑：" : "当前账号只能查看：";
       dom.authStatusText.textContent = prefix + state.session.user.email;
       return;
     }
 
-    const hint = CONFIG.adminEmailHint ? "推荐使用 " + CONFIG.adminEmailHint + " 登录。" : "请用 Supabase Auth 中的管理员账号登录。";
-    dom.authStatusText.textContent = "当前为匿名只读访问。" + hint;
+    const hint = CONFIG.adminEmailHint ? "建议使用 " + CONFIG.adminEmailHint + " 登录。" : "请使用有权限的账号登录。";
+    dom.authStatusText.textContent = "当前为只读访问。" + hint;
   }
 
   function renderResult() {
@@ -1701,6 +1761,11 @@
     state.toastTimer = window.setTimeout(function () {
       dom.toast.classList.remove("show");
     }, 2200);
+  }
+
+  function setActiveView(view) {
+    state.activeView = view;
+    renderActiveView();
   }
 
   function toNumber(value, fallback) {

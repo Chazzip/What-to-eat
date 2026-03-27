@@ -78,6 +78,14 @@ body::after {
   padding: 24px 0 42px;
 }
 
+.app-view {
+  display: none;
+}
+
+.app-view.active {
+  display: block;
+}
+
 .card,
 .sub-card {
   position: relative;
@@ -116,6 +124,10 @@ body::after {
   gap: 24px;
   grid-template-columns: 1.2fr 0.8fr;
   align-items: stretch;
+}
+
+.hero.hero-compact {
+  grid-template-columns: 1fr auto;
 }
 
 .eyebrow,
@@ -170,11 +182,6 @@ body::after {
   font-size: clamp(2.4rem, 4vw, 4.6rem);
   line-height: 0.95;
   letter-spacing: -0.05em;
-}
-
-.hero-copy h1 span {
-  display: block;
-  color: var(--accent-deep);
 }
 
 .hero-copy p,
@@ -289,6 +296,10 @@ body::after {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.status-grid-compact {
+  min-width: min(420px, 100%);
+}
+
 .status-pill {
   padding: 18px;
   background: rgba(255, 255, 255, 0.78);
@@ -315,6 +326,28 @@ body::after {
   grid-template-columns: 1.08fr 0.92fr;
   gap: 22px;
   margin-top: 22px;
+}
+
+.journal-layout,
+.manage-screen {
+  display: grid;
+  gap: 22px;
+  margin-top: 22px;
+}
+
+.journal-layout {
+  grid-template-columns: 1.08fr 0.92fr;
+}
+
+.manage-screen {
+  grid-template-columns: 0.88fr 1.12fr;
+}
+
+.journal-side,
+.manage-side {
+  display: grid;
+  gap: 22px;
+  align-content: start;
 }
 
 .main-column,
@@ -422,6 +455,33 @@ textarea:focus {
 
 .toggle-row {
   margin-top: 4px;
+}
+
+.view-switch {
+  display: inline-flex;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--line);
+  width: fit-content;
+  justify-self: end;
+}
+
+.view-tab {
+  padding: 10px 16px;
+  color: var(--text-soft);
+  background: transparent;
+  box-shadow: none;
+}
+
+.view-tab:hover {
+  box-shadow: none;
+}
+
+.view-tab.active {
+  color: #fffaf6;
+  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
 }
 
 .toggle {
@@ -532,6 +592,21 @@ button:disabled {
   border: 1px solid var(--line);
   display: grid;
   gap: 12px;
+}
+
+.log-panel-head {
+  display: grid;
+  gap: 4px;
+}
+
+.log-panel-head h3 {
+  margin: 0;
+  font-size: 1.04rem;
+}
+
+.log-panel-head p {
+  margin: 0;
+  color: var(--text-soft);
 }
 
 .result-area {
@@ -730,6 +805,8 @@ button:disabled {
 @media (max-width: 1024px) {
   .hero,
   .dashboard,
+  .journal-layout,
+  .manage-screen,
   .manager-layout,
   .inventory-grid {
     grid-template-columns: 1fr;
@@ -758,6 +835,7 @@ button:disabled {
   }
 
   .status-grid,
+  .status-grid-compact,
   .control-grid,
   .form-grid,
   .form-grid.two-col,
@@ -771,6 +849,15 @@ button:disabled {
 
   .button-row button {
     width: 100%;
+  }
+
+  .view-switch {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .view-tab {
+    flex: 1;
   }
 
   .log-fields {
