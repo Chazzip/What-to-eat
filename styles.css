@@ -130,6 +130,17 @@ body::after {
   grid-template-columns: 1fr auto;
 }
 
+.hero-copy,
+.hero-side,
+.hero-status-wrap {
+  min-width: 0;
+}
+
+.hero-status-wrap {
+  justify-items: stretch;
+  align-content: center;
+}
+
 .eyebrow,
 .tiny-badge,
 .status-pill,
@@ -297,7 +308,8 @@ body::after {
 }
 
 .status-grid-compact {
-  min-width: min(420px, 100%);
+  min-width: 0;
+  width: min(420px, 100%);
 }
 
 .status-pill {
@@ -464,8 +476,8 @@ textarea:focus {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid var(--line);
-  width: fit-content;
-  justify-self: end;
+  width: min(420px, 100%);
+  justify-self: stretch;
 }
 
 .view-tab {
@@ -817,6 +829,35 @@ button:disabled {
   }
 }
 
+@media (max-width: 820px) {
+  .hero.hero-compact {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-copy {
+    gap: 12px;
+  }
+
+  .hero-copy h1 {
+    font-size: clamp(2.1rem, 9vw, 3.4rem);
+    line-height: 1;
+  }
+
+  .hero-copy p {
+    line-height: 1.65;
+  }
+
+  .hero-status-wrap {
+    gap: 14px;
+  }
+
+  .status-grid-compact,
+  .view-switch {
+    width: 100%;
+    max-width: none;
+  }
+}
+
 @media (max-width: 720px) {
   .page-shell {
     width: min(100% - 16px, 1220px);
@@ -843,6 +884,22 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 
+  .hero {
+    gap: 16px;
+  }
+
+  .hero-copy h1 {
+    font-size: clamp(2rem, 10vw, 2.8rem);
+  }
+
+  .hero-copy p {
+    font-size: 0.96rem;
+  }
+
+  .status-pill {
+    padding: 14px 16px;
+  }
+
   .section-head {
     grid-template-columns: 1fr;
   }
@@ -854,13 +911,55 @@ button:disabled {
   .view-switch {
     width: 100%;
     justify-content: stretch;
+    padding: 6px;
   }
 
   .view-tab {
     flex: 1;
+    min-width: 0;
+    padding: 10px 12px;
   }
 
   .log-fields {
     flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero,
+  .picker-card,
+  .result-card,
+  .stats-card,
+  .history-card,
+  .area-card,
+  .auth-card,
+  .manager-card,
+  .sub-card {
+    padding: 18px;
+  }
+
+  .eyebrow {
+    font-size: 12px;
+    padding: 7px 12px;
+  }
+
+  .hero-copy h1 {
+    font-size: 1.9rem;
+  }
+
+  .status-pill strong {
+    font-size: 1.04rem;
+  }
+
+  .view-switch {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .view-tab {
+    width: 100%;
+    padding: 10px 8px;
+    font-size: 0.93rem;
   }
 }
