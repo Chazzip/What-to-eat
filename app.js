@@ -54,6 +54,8 @@
     manageView: byId("manageView"),
     pickerBadge: byId("pickerBadge"),
     resultStateBadge: byId("resultStateBadge"),
+    resultCard: byId("resultCard"),
+    resultStage: byId("resultStage"),
     journalBadge: byId("journalBadge"),
     areaSelect: byId("areaSelect"),
     preferenceChips: byId("preferenceChips"),
@@ -71,11 +73,12 @@
     markEatenButton: byId("markEatenButton"),
     favoriteButton: byId("favoriteButton"),
     deprioritizeButton: byId("deprioritizeButton"),
+    journalSummary: byId("journalSummary"),
+    journalRhythmHint: byId("journalRhythmHint"),
     savedMealsList: byId("savedMealsList"),
     areaCount: byId("areaCount"),
     foodCount: byId("foodCount"),
     mealLogCount: byId("mealLogCount"),
-    localHistoryCount: byId("localHistoryCount"),
     journalAreaCount: byId("journalAreaCount"),
     journalFoodCount: byId("journalFoodCount"),
     journalMealLogCount: byId("journalMealLogCount"),
@@ -85,7 +88,10 @@
     manageMealLogCount: byId("manageMealLogCount"),
     manageLocalHistoryCount: byId("manageLocalHistoryCount"),
     manageAreaMap: byId("manageAreaMap"),
-    localDrawHistory: byId("localDrawHistory"),
+    workspaceFocusArea: byId("workspaceFocusArea"),
+    workspaceFocusCount: byId("workspaceFocusCount"),
+    workspaceFocusState: byId("workspaceFocusState"),
+    workspaceFocusHint: byId("workspaceFocusHint"),
     journalLocalDrawHistory: byId("journalLocalDrawHistory"),
     authHintBadge: byId("authHintBadge"),
     authStatusText: byId("authStatusText"),
@@ -151,7 +157,7 @@
     await setupSupabase();
     await loadData();
     renderAll();
-    showToast("页面已准备好，可以开始抽签。");
+    showToast("可以开始抽了。");
   }
 
   function bindEvents() {
@@ -161,6 +167,7 @@
       syncAreaFormWithSelection(areaId);
       renderAreaMap();
       renderInventory();
+      renderManageWorkspace();
     });
 
     dom.avoidRecentToggle.addEventListener("change", renderResultActions);
@@ -187,7 +194,12 @@
     dom.clearFoodFormButton.addEventListener("click", clearFoodForm);
     dom.deleteFoodButton.addEventListener("click", deleteSelectedFood);
     dom.editorAreaSelect.addEventListener("change", () => {
+      const areaId = dom.editorAreaSelect.value;
+      dom.areaSelect.value = areaId;
+      syncAreaFormWithSelection(areaId);
+      renderAreaMap();
       renderInventory();
+      renderManageWorkspace();
     });
     dom.discoverTab.addEventListener("click", () => setActiveView("discover"));
     dom.journalTab.addEventListener("click", () => setActiveView("journal"));
@@ -232,7 +244,7 @@
       console.error(error);
       state.mode = "fallback";
       state.remoteConfigured = false;
-      showToast("Supabase 初始化失败，已回退本地模式。");
+      showToast("在线连接失败，先用本地数据。");
     }
   }
 
@@ -280,7 +292,7 @@
       } catch (error) {
         console.error(error);
         state.mode = "fallback";
-        showToast("Supabase 读取失败，当前先使用本地回退数据。");
+        showToast("在线数据没读到，先用本地数据。");
       }
     }
 
@@ -323,6 +335,7 @@
     renderFilters();
     renderStats();
     renderAreaMap();
+    renderManageWorkspace();
     renderSavedMeals();
     renderLocalDrawHistory();
     renderInventory();
@@ -335,13 +348,13 @@
     const modeText = state.mode === "supabase"
       ? "在线"
       : state.mode === "fallback"
-        ? "回退中"
+        ? "本地"
         : "本地";
 
     dom.connectionBadge.textContent = modeText;
-    dom.adminBadge.textContent = state.isAdmin ? "可编辑" : "只读";
+    dom.adminBadge.textContent = state.isAdmin ? "已登录" : "未登录";
     dom.savedMealsBadge.textContent = state.savedMeals.length + " 条";
-    dom.authHintBadge.textContent = canEditRemote() ? "可编辑" : "只读模式";
+    dom.authHintBadge.textContent = canEditRemote() ? "可改" : "只读";
   }
 
   function renderActiveView() {
@@ -417,11 +430,14 @@
     const foodCount = String(state.foods.length);
     const mealCount = String(state.savedMeals.length);
     const localCount = String(state.localDraws.length);
+    const selectedAreaLabel = dom.areaSelect.value ? getAreaName(dom.areaSelect.value) : "全部";
+    const selectedPreferenceLabel = state.selectedPreference || "未限定";
+    const currentCandidateCount = String(buildCandidates().length);
+    const manageAccessLabel = canEditRemote() ? "可改" : "只读";
 
-    dom.areaCount.textContent = areaCount;
-    dom.foodCount.textContent = foodCount;
-    dom.mealLogCount.textContent = mealCount;
-    dom.localHistoryCount.textContent = localCount;
+    dom.areaCount.textContent = selectedAreaLabel;
+    dom.foodCount.textContent = selectedPreferenceLabel;
+    dom.mealLogCount.textContent = currentCandidateCount;
     dom.journalAreaCount.textContent = areaCount;
     dom.journalFoodCount.textContent = foodCount;
     dom.journalMealLogCount.textContent = mealCount;
@@ -429,7 +445,7 @@
     dom.manageAreaCount.textContent = areaCount;
     dom.manageFoodCount.textContent = foodCount;
     dom.manageMealLogCount.textContent = mealCount;
-    dom.manageLocalHistoryCount.textContent = localCount;
+    dom.manageLocalHistoryCount.textContent = manageAccessLabel;
     dom.journalBadge.textContent = mealCount + " 条";
   }
 
@@ -450,13 +466,104 @@
         }
         renderAreaMap();
         renderInventory();
+        renderManageWorkspace();
       });
       dom.manageAreaMap.appendChild(button);
     });
   }
 
+  function renderManageWorkspace() {
+    const areaId = dom.editorAreaSelect.value || dom.areaSelect.value;
+    const areaName = areaId ? getAreaName(areaId) : "未选择";
+    const inventoryCount = areaId ? getFoodsByArea(areaId).length : state.foods.length;
+    const currentFood = getFoodById(state.editingFoodId);
+
+    let stateLabel = "新增";
+    let hint = "会跟着所选区域变化。";
+
+    if (state.foodEditorMode === "edit" && currentFood) {
+      stateLabel = "编辑「" + currentFood.name + "」";
+      hint = currentFood.name + " 在 " + getAreaName(currentFood.area_id) + "。";
+    } else if (state.areaEditorMode === "edit" && areaId) {
+      stateLabel = "编辑区域";
+      hint = "现在选中的是 " + areaName + "。";
+    } else if (areaId && inventoryCount === 0) {
+      hint = areaName + " 还没有条目。";
+    }
+
+    dom.workspaceFocusArea.textContent = areaName;
+    dom.workspaceFocusCount.textContent = inventoryCount + " 条";
+    dom.workspaceFocusState.textContent = stateLabel;
+    dom.workspaceFocusHint.textContent = hint;
+  }
+
   function renderSavedMeals() {
-    renderTimeline(dom.savedMealsList, state.savedMeals, function (meal) {
+    const meals = state.savedMeals
+      .slice()
+      .sort(function (a, b) {
+        return new Date(b.eaten_at || b.created_at).getTime() - new Date(a.eaten_at || a.created_at).getTime();
+      });
+
+    renderJournalSummary(meals);
+    dom.savedMealsList.innerHTML = "";
+
+    if (!meals.length) {
+      const empty = document.createElement("div");
+      empty.className = "journal-empty";
+
+      const title = document.createElement("strong");
+      title.textContent = "还没有记录";
+
+      const text = document.createElement("p");
+      text.className = "muted";
+      text.textContent = "抽到并且吃了，再回来记一笔。";
+
+      const actions = document.createElement("div");
+      actions.className = "button-row";
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "primary-btn";
+      button.textContent = "去抽一个";
+      button.addEventListener("click", function () {
+        setActiveView("discover");
+      });
+
+      actions.appendChild(button);
+      empty.appendChild(title);
+      empty.appendChild(text);
+      empty.appendChild(actions);
+      dom.savedMealsList.appendChild(empty);
+      return;
+    }
+
+    buildMealDayGroups(meals).forEach(function (group) {
+      const section = document.createElement("section");
+      section.className = "journal-day-group";
+
+      const head = document.createElement("div");
+      head.className = "journal-day-head";
+
+      const title = document.createElement("h3");
+      title.textContent = group.label;
+
+      const count = document.createElement("span");
+      count.className = "tiny-badge";
+      count.textContent = group.items.length + " 条";
+
+      head.appendChild(title);
+      head.appendChild(count);
+      section.appendChild(head);
+
+      group.items.forEach(function (meal) {
+        section.appendChild(renderMealTimelineItem(meal));
+      });
+
+      dom.savedMealsList.appendChild(section);
+    });
+  }
+
+  function renderMealTimelineItem(meal) {
       const row = document.createElement("div");
       row.className = "timeline-item";
 
@@ -481,7 +588,70 @@
       row.appendChild(meta);
       row.appendChild(note);
       return row;
-    }, "还没有保存过记录。");
+  }
+
+  function renderJournalSummary(meals) {
+    dom.journalSummary.innerHTML = "";
+
+    const latestMeal = meals[0] || null;
+    const sevenDayCount = meals.filter(function (meal) {
+      return getDaysSince(meal.eaten_at || meal.created_at) <= 7;
+    }).length;
+    const topArea = getMostFrequentArea(meals);
+
+    [
+      {
+        label: "最近一顿",
+        value: latestMeal ? latestMeal.food_name : "还没有",
+        subtext: latestMeal ? formatDateTime(latestMeal.eaten_at || latestMeal.created_at) : "等你记下第一条"
+      },
+      {
+        label: "近 7 天",
+        value: sevenDayCount + " 条",
+        subtext: sevenDayCount ? "这周有在记" : "这周还没记"
+      },
+      {
+        label: "常去区域",
+        value: topArea ? topArea.name : "还没形成",
+        subtext: topArea ? topArea.count + " 次" : "再吃几顿会更明显"
+      }
+    ].forEach(function (item) {
+      const card = document.createElement("article");
+      card.className = "journal-summary-card";
+
+      const label = document.createElement("span");
+      label.className = "journal-summary-label";
+      label.textContent = item.label;
+
+      const value = document.createElement("strong");
+      value.className = "journal-summary-value";
+      value.textContent = item.value;
+
+      const subtext = document.createElement("small");
+      subtext.textContent = item.subtext;
+
+      card.appendChild(label);
+      card.appendChild(value);
+      card.appendChild(subtext);
+      dom.journalSummary.appendChild(card);
+    });
+
+    if (!meals.length) {
+      dom.journalRhythmHint.textContent = "先记下第一顿。";
+      return;
+    }
+
+    if (sevenDayCount >= 4) {
+      dom.journalRhythmHint.textContent = "最近记得挺勤。";
+      return;
+    }
+
+    if (topArea && topArea.count >= 3) {
+      dom.journalRhythmHint.textContent = "最近更常去 " + topArea.name + "。";
+      return;
+    }
+
+    dom.journalRhythmHint.textContent = "继续记，之后会更清楚。";
   }
 
   function renderLocalDrawHistory() {
@@ -504,8 +674,7 @@
       return row;
     };
 
-    renderTimeline(dom.localDrawHistory, state.localDraws, factory, "还没有抽中过。");
-    renderTimeline(dom.journalLocalDrawHistory, state.localDraws, factory, "还没有抽中过。");
+    renderTimeline(dom.journalLocalDrawHistory, state.localDraws, factory, "还没抽过。");
   }
 
   function renderTimeline(container, items, factory, emptyText) {
@@ -533,7 +702,7 @@
     if (!foods.length) {
       const empty = document.createElement("p");
       empty.className = "timeline-empty";
-      empty.textContent = "这个区域还没有美食，先在上面新增一条。";
+      empty.textContent = "这个区域还没有条目。";
       dom.inventoryList.appendChild(empty);
       return;
     }
@@ -611,7 +780,7 @@
 
   function renderAuthState() {
     if (state.mode !== "supabase") {
-      dom.authStatusText.textContent = "当前是本地模式。这里的修改只保存在当前浏览器。";
+      dom.authStatusText.textContent = "现在是本地模式，只保存在这台设备。";
       dom.loginButton.disabled = true;
       dom.logoutButton.disabled = true;
       return;
@@ -621,13 +790,13 @@
     dom.logoutButton.disabled = false;
 
     if (state.session && state.session.user) {
-      const prefix = state.isAdmin ? "当前账号可编辑：" : "当前账号只能查看：";
+      const prefix = state.isAdmin ? "已登录：" : "访客：";
       dom.authStatusText.textContent = prefix + state.session.user.email;
       return;
     }
 
-    const hint = CONFIG.adminEmailHint ? "建议使用 " + CONFIG.adminEmailHint + " 登录。" : "请使用有权限的账号登录。";
-    dom.authStatusText.textContent = "当前为只读访问。" + hint;
+    const hint = CONFIG.adminEmailHint ? "用 " + CONFIG.adminEmailHint + " 登录。" : "请登录有权限的账号。";
+    dom.authStatusText.textContent = "还没登录。" + hint;
   }
 
   function renderResult() {
@@ -635,20 +804,20 @@
 
     const resultFood = getFoodById(state.currentResultFoodId);
     if (!resultFood) {
-      dom.resultArea.textContent = dom.areaSelect.value ? "当前区域：" + getAreaName(dom.areaSelect.value) : "先选一个区域";
-      dom.resultFood.textContent = "让这顿饭自己出现";
-      dom.resultNote.textContent = "区域和偏好会一起决定结果。";
+      dom.resultArea.textContent = dom.areaSelect.value ? getAreaName(dom.areaSelect.value) : "选个区域";
+      dom.resultFood.textContent = "今天吃什么";
+      dom.resultNote.textContent = "点一下就知道。";
       dom.resultMeta.innerHTML = "";
-      dom.resultStateBadge.textContent = "等待开始";
+      dom.resultStateBadge.textContent = "还没抽";
       renderResultActions();
       return;
     }
 
     const areaName = getAreaName(resultFood.area_id);
-    dom.resultArea.textContent = "这次锁定：" + areaName;
+    dom.resultArea.textContent = areaName;
     dom.resultFood.textContent = resultFood.name;
     dom.resultNote.textContent = resultFood.note || "没有备注，这次就纯凭直觉出发。";
-    dom.resultStateBadge.textContent = "结果已揭晓";
+    dom.resultStateBadge.textContent = "已出结果";
 
     dom.resultMeta.innerHTML = "";
     dom.resultMeta.appendChild(makeMetaChip("评分 " + formatRatingLabel(resultFood.rating)));
@@ -672,7 +841,7 @@
       link.target = "_blank";
       link.rel = "noreferrer";
       link.className = "meta-chip";
-      link.textContent = "打开导航";
+      link.textContent = "导航";
       link.style.textDecoration = "none";
       dom.resultMeta.appendChild(link);
     }
@@ -720,26 +889,26 @@
     });
 
     if (!editable && state.mode === "supabase") {
-      dom.areaNameInput.placeholder = "登录管理员后可编辑";
-      dom.foodNameInput.placeholder = "登录管理员后可编辑";
+      dom.areaNameInput.placeholder = "登录后可修改";
+      dom.foodNameInput.placeholder = "登录后可修改";
     } else {
       dom.areaNameInput.placeholder = "例如：五一广场 / 公司附近";
       dom.foodNameInput.placeholder = "例如：螺蛳粉 / 煲仔饭 / 热卤";
     }
 
-    dom.areaEditorBadge.textContent = state.areaEditorMode === "edit" ? "编辑模式" : "新增模式";
+    dom.areaEditorBadge.textContent = state.areaEditorMode === "edit" ? "编辑" : "新增";
     dom.areaEditorHint.textContent = state.areaEditorMode === "edit"
-      ? "当前保存会修改这个区域本身。想新增新区域，请点“新增区域模式”。"
-      : "这里用来新增区域。点右侧“区域地图”里的区域，也可以切换到编辑该区域。";
-    dom.saveAreaButton.textContent = state.areaEditorMode === "edit" ? "保存区域修改" : "新增这个区域";
+      ? "保存后会直接改这个区域。"
+      : "默认是新增，点左边区域会切到编辑。";
+    dom.saveAreaButton.textContent = state.areaEditorMode === "edit" ? "保存" : "新建区域";
     dom.deleteAreaButton.disabled = !editable || state.areaEditorMode !== "edit";
 
     const currentFood = getFoodById(state.editingFoodId);
-    dom.foodEditorBadge.textContent = state.foodEditorMode === "edit" ? "编辑模式" : "新增模式";
+    dom.foodEditorBadge.textContent = state.foodEditorMode === "edit" ? "编辑" : "新增";
     dom.foodEditorHint.textContent = state.foodEditorMode === "edit" && currentFood
-      ? "当前保存会覆盖“" + currentFood.name + "”。想新增新条目，请点“新增美食模式”。"
-      : "当前会新增一条新的美食。点下面库存卡片后，才会进入编辑并覆盖那一条。";
-    dom.saveFoodButton.textContent = state.foodEditorMode === "edit" ? "保存这条修改" : "新增这条美食";
+      ? "保存后会直接改「" + currentFood.name + "」。"
+      : "默认是新增，点库存卡片才会切到编辑。";
+    dom.saveFoodButton.textContent = state.foodEditorMode === "edit" ? "保存" : "新建美食";
     dom.deleteFoodButton.disabled = !editable || state.foodEditorMode !== "edit" || !currentFood;
     if (!state.currentResultFoodId) {
       dom.rerollButton.disabled = true;
@@ -750,8 +919,8 @@
     const candidates = buildCandidates();
     if (!candidates.length) {
       dom.resultStateBadge.textContent = "没有候选";
-      dom.resultNote.textContent = "当前筛选太严格了，试试清空偏好或切换区域。";
-      showToast("当前条件下没有可抽取的美食。");
+      dom.resultNote.textContent = "换个区域或者清掉偏好试试。";
+      showToast("这轮没抽到。");
       return;
     }
 
@@ -764,10 +933,10 @@
       const choice = weightedPick(candidates);
       finalChoice = choice.food;
 
-      dom.resultArea.textContent = "目标区域：" + getAreaName(finalChoice.area_id);
+      dom.resultArea.textContent = getAreaName(finalChoice.area_id);
       dom.resultFood.textContent = finalChoice.name;
-      dom.resultNote.textContent = "让纠结先晃几下。";
-      dom.resultStateBadge.textContent = "随机中...";
+      dom.resultNote.textContent = "马上出结果。";
+      dom.resultStateBadge.textContent = "抽签中";
 
       counter += 1;
       if (counter >= maxRolls) {
@@ -836,24 +1005,25 @@
     state.currentResultAreaId = food.area_id;
     pushLocalDraw(food);
     renderResult();
-    showToast("这次抽中了：" + food.name);
+    pulseResultReveal();
+    showToast(food.name);
   }
 
   function setRollingState(isRolling) {
     dom.decideButton.disabled = isRolling;
     dom.rerollButton.disabled = isRolling || !state.currentResultFoodId;
-    dom.pickerBadge.textContent = isRolling ? "随机中..." : buildCandidateSummaryText();
+    dom.pickerBadge.textContent = isRolling ? "抽签中" : buildCandidateSummaryText();
   }
 
   async function markCurrentAsEaten() {
     const food = getFoodById(state.currentResultFoodId);
     if (!food) {
-      showToast("先抽出一个结果再记录。");
+      showToast("先抽一个。");
       return;
     }
 
     if (!canEditRemote()) {
-      showToast("当前是只读模式，登录后才能保存记录。");
+      showToast("登录后才能保存。");
       return;
     }
 
@@ -916,18 +1086,18 @@
     dom.mealRatingInput.value = "";
     dom.mealNoteInput.value = "";
     renderAll();
-    showToast("这次记录已经保存。");
+    showToast("已记下。");
   }
 
   async function adjustCurrentFoodWeight(delta) {
     const food = getFoodById(state.currentResultFoodId);
     if (!food) {
-      showToast("先抽出一个结果再调整。");
+      showToast("先抽一个。");
       return;
     }
 
     if (!canEditRemote()) {
-      showToast("当前是只读模式，无法修改权重。");
+      showToast("登录后才能改。");
       return;
     }
 
@@ -953,12 +1123,12 @@
 
     state.currentResultFoodId = food.id;
     renderAll();
-    showToast(delta > 0 ? "以后会更常推荐它。" : "以后会少推一点。");
+    showToast(delta > 0 ? "之后会更常出现。" : "之后会少出现。");
   }
 
   async function loginAdmin() {
     if (state.mode !== "supabase" || !state.supabase) {
-      showToast("当前未启用 Supabase 登录。");
+      showToast("还没启用登录。");
       return;
     }
 
@@ -981,7 +1151,7 @@
     }
 
     dom.authPasswordInput.value = "";
-    showToast("管理员登录成功。");
+      showToast("登录成功。");
   }
 
   async function logoutAdmin() {
@@ -994,12 +1164,12 @@
       showToast("退出失败：" + error.message);
       return;
     }
-    showToast("已退出管理员登录。");
+    showToast("已退出。");
   }
 
   async function saveArea() {
     if (!canEditRemote()) {
-      showToast("当前是只读模式，无法编辑区域。");
+      showToast("登录后才能改区域。");
       return;
     }
 
@@ -1057,7 +1227,7 @@
       enterCreateFoodMode(dom.editorAreaSelect.value);
     }
     renderAll();
-    showToast(wasEditingArea ? "区域修改已保存。" : "新区域已创建。");
+    showToast(wasEditingArea ? "已保存。" : "已新建。");
   }
 
   async function deleteSelectedArea() {
@@ -1065,12 +1235,12 @@
     const area = getAreaById(areaId);
 
     if (!area) {
-      showToast("当前没有可删除的区域。");
+      showToast("没有选中区域。");
       return;
     }
 
     if (!canEditRemote()) {
-      showToast("当前是只读模式，无法删除区域。");
+      showToast("登录后才能删区域。");
       return;
     }
 
@@ -1102,7 +1272,7 @@
 
   async function saveFood() {
     if (!canEditRemote()) {
-      showToast("当前是只读模式，无法编辑美食。");
+      showToast("登录后才能改美食。");
       return;
     }
 
@@ -1174,12 +1344,12 @@
       if (savedFood) {
         fillFoodForm(savedFood);
       }
-      showToast("这条美食修改已保存。");
+      showToast("已保存。");
     } else {
       const preserveAreaId = areaId;
       clearFoodForm();
       dom.editorAreaSelect.value = preserveAreaId;
-      showToast("新美食已新增，现在可以继续添加下一条。");
+      showToast("已新增。");
     }
 
     renderAll();
@@ -1188,12 +1358,12 @@
   async function deleteSelectedFood() {
     const food = getFoodById(state.editingFoodId);
     if (!food) {
-      showToast("先从库存卡片里选中一个美食。");
+      showToast("先选一条美食。");
       return;
     }
 
     if (!canEditRemote()) {
-      showToast("当前是只读模式，无法删除美食。");
+      showToast("登录后才能删美食。");
       return;
     }
 
@@ -1224,7 +1394,9 @@
   function fillFoodForm(food) {
     state.foodEditorMode = "edit";
     state.editingFoodId = food.id;
+    dom.areaSelect.value = food.area_id;
     dom.editorAreaSelect.value = food.area_id;
+    syncAreaFormWithSelection(food.area_id);
     dom.foodNameInput.value = food.name;
     dom.foodTagsInput.value = (food.tags || []).join(", ");
     dom.foodMoodsInput.value = (food.moods || []).join(", ");
@@ -1233,6 +1405,8 @@
     dom.foodHoursInput.value = food.business_hours || "";
     dom.foodMapInput.value = food.map_link || "";
     dom.foodNoteInput.value = food.note || "";
+    renderAreaMap();
+    renderManageWorkspace();
     renderEditorState();
     renderInventory();
   }
@@ -1248,6 +1422,7 @@
     dom.foodHoursInput.value = "";
     dom.foodMapInput.value = "";
     dom.foodNoteInput.value = "";
+    renderManageWorkspace();
     renderEditorState();
     renderInventory();
   }
@@ -1292,6 +1467,7 @@
     state.foodEditorMode = "create";
     state.editingFoodId = "";
     if (areaId) {
+      dom.areaSelect.value = areaId;
       dom.editorAreaSelect.value = areaId;
     }
     dom.foodNameInput.value = "";
@@ -1302,6 +1478,8 @@
     dom.foodHoursInput.value = "";
     dom.foodMapInput.value = "";
     dom.foodNoteInput.value = "";
+    renderAreaMap();
+    renderManageWorkspace();
     renderEditorState();
     renderInventory();
   }
@@ -1324,7 +1502,7 @@
     link.download = "dinner-data-export.json";
     link.click();
     URL.revokeObjectURL(url);
-    showToast("当前数据已导出。");
+    showToast("已导出。");
   }
 
   async function resetLocalFallback() {
@@ -1345,7 +1523,7 @@
       renderStats();
     }
 
-    showToast("本地回退数据已重置。");
+    showToast("本地数据已重置。");
   }
 
   function pushLocalDraw(food) {
@@ -1380,7 +1558,7 @@
 
   function buildCandidateSummaryText() {
     const count = buildCandidates().length;
-    return count ? "当前有 " + count + " 个候选" : "当前没有候选";
+    return count ? count + " 个候选" : "没有候选";
   }
 
   function buildPreferenceOptions() {
@@ -1672,6 +1850,77 @@
     return diff / (1000 * 60 * 60 * 24);
   }
 
+  function getMostFrequentArea(meals) {
+    const counts = {};
+
+    meals.forEach(function (meal) {
+      const areaName = meal.area_name || "未分区";
+      counts[areaName] = (counts[areaName] || 0) + 1;
+    });
+
+    return Object.entries(counts)
+      .map(function (entry) {
+        return { name: entry[0], count: entry[1] };
+      })
+      .sort(function (a, b) {
+        return b.count - a.count;
+      })[0] || null;
+  }
+
+  function buildMealDayGroups(meals) {
+    const groups = [];
+
+    meals.forEach(function (meal) {
+      const date = new Date(meal.eaten_at || meal.created_at);
+      const key = getLocalDateKey(date);
+      const existing = groups.find(function (group) {
+        return group.key === key;
+      });
+
+      if (existing) {
+        existing.items.push(meal);
+        return;
+      }
+
+      groups.push({
+        key: key,
+        label: formatDayLabel(date),
+        items: [meal]
+      });
+    });
+
+    return groups;
+  }
+
+  function getLocalDateKey(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return year + "-" + month + "-" + day;
+  }
+
+  function formatDayLabel(date) {
+    const today = new Date();
+    const todayKey = getLocalDateKey(today);
+    const targetKey = getLocalDateKey(date);
+
+    if (targetKey === todayKey) {
+      return "今天";
+    }
+
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (targetKey === getLocalDateKey(yesterday)) {
+      return "昨天";
+    }
+
+    return new Intl.DateTimeFormat("zh-CN", {
+      month: "long",
+      day: "numeric",
+      weekday: "short"
+    }).format(date);
+  }
+
   function formatDateTime(value) {
     if (!value) {
       return "刚刚";
@@ -1700,6 +1949,41 @@
   function setActiveView(view) {
     state.activeView = view;
     renderActiveView();
+    pulseViewEntry(view);
+  }
+
+  function pulseViewEntry(view) {
+    const viewMap = {
+      discover: dom.discoverView,
+      journal: dom.journalView,
+      manage: dom.manageView
+    };
+
+    const element = viewMap[view];
+    if (!element) {
+      return;
+    }
+
+    element.classList.remove("view-enter");
+    void element.offsetWidth;
+    element.classList.add("view-enter");
+  }
+
+  function pulseResultReveal() {
+    if (!dom.resultCard || !dom.resultStage) {
+      return;
+    }
+
+    dom.resultCard.classList.remove("result-reveal");
+    dom.resultStage.classList.remove("result-stage-reveal");
+    void dom.resultCard.offsetWidth;
+    dom.resultCard.classList.add("result-reveal");
+    dom.resultStage.classList.add("result-stage-reveal");
+
+    window.setTimeout(function () {
+      dom.resultCard.classList.remove("result-reveal");
+      dom.resultStage.classList.remove("result-stage-reveal");
+    }, 900);
   }
 
   function toNumber(value, fallback) {

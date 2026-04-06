@@ -13,13 +13,18 @@
         <span class="eyebrow">What to eat?</span>
         <h1>What to eat?</h1>
         <p>抽我抽我！</p>
+        <div class="hero-tags">
+          <span>快一点</span>
+          <span>热乎的</span>
+          <span>重口也行</span>
+        </div>
       </div>
 
       <div class="hero-side hero-status-wrap">
         <div class="status-grid status-grid-compact">
           <div class="status-pill">
             <span>连接</span>
-            <strong id="connectionBadge">初始化中</strong>
+            <strong id="connectionBadge">载入中</strong>
           </div>
           <div class="status-pill">
             <span>权限</span>
@@ -32,9 +37,9 @@
         </div>
 
         <div class="view-switch" role="tablist" aria-label="页面视图">
-          <button class="view-tab active" id="discoverTab" type="button" role="tab" aria-selected="true">Pick</button>
-          <button class="view-tab" id="journalTab" type="button" role="tab" aria-selected="false">Journal</button>
-          <button class="view-tab" id="manageTab" type="button" role="tab" aria-selected="false">Manage</button>
+          <button class="view-tab active" id="discoverTab" type="button" role="tab" aria-selected="true">抽签</button>
+          <button class="view-tab" id="journalTab" type="button" role="tab" aria-selected="false">记录</button>
+          <button class="view-tab" id="manageTab" type="button" role="tab" aria-selected="false">整理</button>
         </div>
       </div>
     </section>
@@ -45,10 +50,10 @@
           <article class="card picker-card">
             <div class="section-head">
               <div>
-                <h2>Pick</h2>
-                <p>先定范围，再抽一个这顿的答案。</p>
+                <h2>抽签</h2>
+                <p>定个范围，直接开抽。</p>
               </div>
-              <span class="tiny-badge" id="pickerBadge">准备就绪</span>
+              <span class="tiny-badge" id="pickerBadge">可抽</span>
             </div>
 
             <div class="control-grid">
@@ -83,27 +88,27 @@
             </div>
           </article>
 
-          <article class="card result-card">
+          <article class="card result-card" id="resultCard">
             <div class="section-head">
               <div>
-                <h2>Result</h2>
-                <p>抽到合适的就去吃，不合适就再来一次。</p>
+                <h2>结果</h2>
+                <p>看一眼，不行就重抽。</p>
               </div>
-              <span class="tiny-badge" id="resultStateBadge">等待开始</span>
+              <span class="tiny-badge" id="resultStateBadge">还没抽</span>
             </div>
 
-            <div class="result-stage">
-              <span class="result-area" id="resultArea">先选区域</span>
-              <strong class="result-food" id="resultFood">让这顿饭自己出现</strong>
-              <p class="result-note" id="resultNote">选好范围后，直接抽一个答案。</p>
+            <div class="result-stage" id="resultStage">
+              <span class="result-area" id="resultArea">选个区域</span>
+              <strong class="result-food" id="resultFood">今天吃什么</strong>
+              <p class="result-note" id="resultNote">点一下就知道。</p>
             </div>
 
             <div class="result-meta" id="resultMeta"></div>
 
             <div class="log-panel">
               <div class="log-panel-head">
-                <h3>吃完再记一笔</h3>
-                <p>真的吃了再保存。</p>
+                <h3>吃了就记一笔</h3>
+                <p>顺手记一下，下次也更好抽。</p>
               </div>
               <div class="log-fields">
                 <label class="field-block">
@@ -123,10 +128,19 @@
                 </label>
               </div>
 
-              <div class="button-row">
-                <button class="primary-btn" id="markEatenButton" type="button">记进日记</button>
-                <button class="secondary-btn" id="favoriteButton" type="button">下次多推荐</button>
-                <button class="ghost-strong-btn" id="deprioritizeButton" type="button">下次少推荐</button>
+              <div class="result-primary-row">
+                <button class="primary-btn result-primary-btn" id="markEatenButton" type="button">记下来</button>
+              </div>
+
+              <div class="result-feedback-panel">
+                <div class="result-feedback-copy">
+                  <strong>口味反馈</strong>
+                  <p>只影响之后的推荐，不会记进记录。</p>
+                </div>
+                <div class="button-row result-feedback-row">
+                  <button class="secondary-btn" id="favoriteButton" type="button">以后多推它</button>
+                  <button class="ghost-strong-btn" id="deprioritizeButton" type="button">以后少推它</button>
+                </div>
               </div>
             </div>
           </article>
@@ -136,38 +150,24 @@
           <article class="card stats-card">
             <div class="section-head">
               <div>
-                <h2>Overview</h2>
-                <p>你现在手上的可选范围。</p>
+                <h2>范围</h2>
+                <p>这次按这个范围抽。</p>
               </div>
             </div>
             <div class="stats-grid">
               <div class="stat-box">
                 <strong id="areaCount">0</strong>
-                <span>区域</span>
+                <span>区域范围</span>
               </div>
               <div class="stat-box">
                 <strong id="foodCount">0</strong>
-                <span>美食</span>
+                <span>偏好</span>
               </div>
               <div class="stat-box">
                 <strong id="mealLogCount">0</strong>
-                <span>日记</span>
-              </div>
-              <div class="stat-box">
-                <strong id="localHistoryCount">0</strong>
-                <span>最近抽中</span>
+                <span>可选数</span>
               </div>
             </div>
-          </article>
-
-          <article class="card history-card">
-            <div class="section-head">
-              <div>
-                <h2>Recent Picks</h2>
-                <p>系统会参考这些记录，尽量别总是抽到重复的。</p>
-              </div>
-            </div>
-            <div class="timeline compact" id="localDrawHistory"></div>
           </article>
         </aside>
       </section>
@@ -177,12 +177,14 @@
       <section class="journal-layout">
         <article class="card history-card journal-main">
           <div class="section-head">
-            <div>
-              <h2>Journal</h2>
-              <p>这里记录真正吃过的这顿。</p>
-            </div>
-            <span class="tiny-badge" id="journalBadge">已记录</span>
+              <div>
+                <h2>记录</h2>
+                <p>吃过的都在这。</p>
+              </div>
+            <span class="tiny-badge" id="journalBadge">0 条</span>
           </div>
+          <div class="journal-summary" id="journalSummary"></div>
+          <p class="journal-rhythm-note" id="journalRhythmHint"></p>
           <div class="timeline" id="savedMealsList"></div>
         </article>
 
@@ -190,8 +192,8 @@
           <article class="card history-card">
             <div class="section-head">
               <div>
-                <h2>Recent Picks</h2>
-                <p>还没记进日记的抽签结果，会先停在这里。</p>
+                <h2>最近抽过</h2>
+                <p>还没记进记录的，会先放这边。</p>
               </div>
             </div>
             <div class="timeline compact" id="journalLocalDrawHistory"></div>
@@ -200,8 +202,8 @@
           <article class="card stats-card">
             <div class="section-head">
               <div>
-                <h2>Stats</h2>
-                <p>回看一下你们最近吃饭的节奏。</p>
+                <h2>统计</h2>
+                <p>看一下最近都吃了些什么。</p>
               </div>
             </div>
             <div class="stats-grid">
@@ -230,15 +232,15 @@
     <section class="app-view" id="manageView">
       <section class="manage-screen">
         <article class="card auth-card">
-            <div class="section-head">
+          <div class="section-head">
               <div>
-                <h2>Manage</h2>
-                <p>登录后可以维护区域和美食。</p>
+                <h2>整理</h2>
+                <p>登录后再改区域和美食。</p>
               </div>
-              <span class="tiny-badge" id="authHintBadge">只读模式</span>
-            </div>
+            <span class="tiny-badge" id="authHintBadge">只读</span>
+          </div>
 
-          <div class="auth-copy" id="authStatusText">还未连接管理员会话。</div>
+          <div class="auth-copy" id="authStatusText">还没登录。</div>
 
           <div class="auth-form" id="authForm">
             <label class="field-block">
@@ -256,150 +258,181 @@
           </div>
         </article>
         <section class="card manager-card">
-          <div class="button-row">
-            <button class="secondary-btn" id="exportButton" type="button">导出数据</button>
-            <button class="ghost-strong-btn" id="resetLocalButton" type="button">重置本地缓存</button>
-          </div>
-
-          <div class="manager-layout">
-            <section class="sub-card">
-              <div class="editor-strip">
-                <h3>区域</h3>
-                <span class="tiny-badge" id="areaEditorBadge">新增模式</span>
-              </div>
-              <p class="editor-hint" id="areaEditorHint">这里用来新增区域。点右侧“区域地图”里的区域，也可以切换到编辑该区域。</p>
-              <div class="form-grid">
-                <label class="field-block">
-                  <span>区域名称</span>
-                  <input id="areaNameInput" type="text" placeholder="例如：五一广场 / 公司附近" />
-                </label>
-                <label class="field-block">
-                  <span>排序值</span>
-                  <input id="areaSortInput" type="number" min="0" step="1" placeholder="数字越小越靠前" />
-                </label>
-              </div>
-              <div class="button-row">
-                <button class="secondary-btn" id="newAreaButton" type="button">新增区域模式</button>
-                <button class="primary-btn" id="saveAreaButton" type="button">保存区域</button>
-                <button class="secondary-btn" id="clearAreaFormButton" type="button">清空区域表单</button>
-                <button class="ghost-strong-btn" id="deleteAreaButton" type="button">删除当前区域</button>
-              </div>
-            </section>
-
-            <section class="sub-card">
-              <div class="editor-strip">
-                <h3>美食</h3>
-                <span class="tiny-badge" id="foodEditorBadge">新增模式</span>
-              </div>
-              <p class="editor-hint" id="foodEditorHint">当前会新增一条新的美食。点下面库存卡片后，才会进入编辑并覆盖那一条。</p>
-              <div class="form-grid two-col">
-                <label class="field-block">
-                  <span>所属区域</span>
-                  <select id="editorAreaSelect"></select>
-                </label>
-                <label class="field-block">
-                  <span>美食名称</span>
-                  <input id="foodNameInput" type="text" placeholder="例如：螺蛳粉 / 煲仔饭 / 热卤" />
-                </label>
-                <label class="field-block">
-                  <span>标签</span>
-                  <input id="foodTagsInput" type="text" placeholder="逗号分隔，例如：重口, 小吃, 夜宵" />
-                </label>
-                <label class="field-block">
-                  <span>适合场景</span>
-                  <input id="foodMoodsInput" type="text" placeholder="逗号分隔，例如：快手解决, 约会感" />
-                </label>
-                <label class="field-block">
-                  <span>个人评分</span>
-                  <select id="foodRatingInput">
-                    <option value="5">夯爆了</option>
-                    <option value="4">顶级</option>
-                    <option value="3" selected>人上人</option>
-                    <option value="2">NPC</option>
-                    <option value="1">拉完了</option>
-                  </select>
-                </label>
-                <label class="field-block">
-                  <span>复吃权重</span>
-                  <select id="foodWeightInput">
-                    <option value="5">5 很想常吃</option>
-                    <option value="4">4 比较常吃</option>
-                    <option value="3" selected>3 正常</option>
-                    <option value="2">2 偶尔</option>
-                    <option value="1">1 少推</option>
-                  </select>
-                </label>
-                <label class="field-block">
-                  <span>营业时间</span>
-                  <input id="foodHoursInput" type="text" placeholder="例如：11:00-22:00 / 晚上出摊" />
-                </label>
-                <label class="field-block full">
-                  <span>导航链接</span>
-                  <input id="foodMapInput" type="url" placeholder="高德 / 腾讯地图链接" />
-                </label>
-                <label class="field-block full">
-                  <span>备注</span>
-                  <textarea id="foodNoteInput" placeholder="例如：招牌是糖油粑粑、适合雨天、排队时间较长"></textarea>
-                </label>
-              </div>
-              <div class="button-row">
-                <button class="secondary-btn" id="newFoodButton" type="button">新增美食模式</button>
-                <button class="primary-btn" id="saveFoodButton" type="button">新增这条美食</button>
-                <button class="secondary-btn" id="clearFoodFormButton" type="button">清空当前输入</button>
-                <button class="ghost-strong-btn" id="deleteFoodButton" type="button">删除当前美食</button>
-              </div>
-            </section>
-          </div>
-
-          <section class="inventory-wrap">
-            <div class="section-head">
-              <div>
-                <h3>库存</h3>
-                <p>点卡片即可回填到编辑器里继续修改。</p>
-              </div>
+          <div class="manage-workbench-head">
+            <div class="manage-workbench-copy">
+              <h2>工作区</h2>
+              <p>先选区域，再改内容。</p>
             </div>
-            <div class="inventory-grid" id="inventoryList"></div>
-          </section>
+            <div class="button-row tight manage-tools">
+              <button class="secondary-btn" id="exportButton" type="button">导出</button>
+              <button class="ghost-strong-btn" id="resetLocalButton" type="button">重置本地</button>
+            </div>
+          </div>
+
+          <div class="manage-workbench">
+            <aside class="workspace-sidebar">
+              <section class="sub-card workspace-card">
+                <div class="section-head compact-head">
+                  <div>
+                    <h3>概览</h3>
+                    <p>先看一下现在有多少内容。</p>
+                  </div>
+                </div>
+                <div class="stats-grid">
+                  <div class="stat-box">
+                    <strong id="manageAreaCount">0</strong>
+                    <span>区域</span>
+                  </div>
+                  <div class="stat-box">
+                    <strong id="manageFoodCount">0</strong>
+                    <span>美食</span>
+                  </div>
+                  <div class="stat-box">
+                    <strong id="manageMealLogCount">0</strong>
+                    <span>日记</span>
+                  </div>
+                  <div class="stat-box">
+                    <strong id="manageLocalHistoryCount">0</strong>
+                    <span>权限</span>
+                  </div>
+                </div>
+              </section>
+
+              <section class="sub-card workspace-card">
+                <div class="section-head compact-head">
+                  <div>
+                    <h3>区域</h3>
+                    <p>点一下就切过去。</p>
+                  </div>
+                </div>
+                <div class="pill-grid" id="manageAreaMap"></div>
+              </section>
+            </aside>
+
+            <div class="workspace-main">
+              <section class="sub-card workspace-focus">
+                <div class="section-head compact-head">
+                  <div>
+                    <h3>正在整理</h3>
+                    <p id="workspaceFocusHint">会跟着所选区域变化。</p>
+                  </div>
+                </div>
+                <div class="workspace-focus-grid">
+                  <article class="workspace-focus-stat">
+                    <span>所选区域</span>
+                    <strong id="workspaceFocusArea">未选择</strong>
+                  </article>
+                  <article class="workspace-focus-stat">
+                    <span>条目数</span>
+                    <strong id="workspaceFocusCount">0 条</strong>
+                  </article>
+                  <article class="workspace-focus-stat">
+                    <span>编辑状态</span>
+                    <strong id="workspaceFocusState">新增</strong>
+                  </article>
+                </div>
+              </section>
+
+              <section class="sub-card editor-panel">
+                <div class="editor-strip">
+                  <h3>区域</h3>
+                  <span class="tiny-badge" id="areaEditorBadge">新增</span>
+                </div>
+                <p class="editor-hint" id="areaEditorHint">新建区域，或者点左边的区域直接改。</p>
+                <div class="form-grid">
+                  <label class="field-block">
+                    <span>区域名称</span>
+                    <input id="areaNameInput" type="text" placeholder="例如：五一广场 / 公司附近" />
+                  </label>
+                  <label class="field-block">
+                    <span>排序值</span>
+                    <input id="areaSortInput" type="number" min="0" step="1" placeholder="越小越靠前" />
+                  </label>
+                </div>
+                <div class="button-row">
+                  <button class="secondary-btn" id="newAreaButton" type="button">新建区域</button>
+                  <button class="primary-btn" id="saveAreaButton" type="button">保存</button>
+                  <button class="secondary-btn" id="clearAreaFormButton" type="button">清空</button>
+                  <button class="ghost-strong-btn" id="deleteAreaButton" type="button">删除这个区域</button>
+                </div>
+              </section>
+
+              <section class="sub-card editor-panel">
+                <div class="editor-strip">
+                  <h3>美食</h3>
+                  <span class="tiny-badge" id="foodEditorBadge">新增</span>
+                </div>
+                <p class="editor-hint" id="foodEditorHint">默认是新增，点库存卡片才会切到编辑。</p>
+                <div class="form-grid two-col">
+                  <label class="field-block">
+                    <span>所属区域</span>
+                    <select id="editorAreaSelect"></select>
+                  </label>
+                  <label class="field-block">
+                    <span>美食名称</span>
+                    <input id="foodNameInput" type="text" placeholder="例如：螺蛳粉 / 煲仔饭 / 热卤" />
+                  </label>
+                  <label class="field-block">
+                    <span>标签</span>
+                    <input id="foodTagsInput" type="text" placeholder="逗号分隔，例如：重口, 小吃, 夜宵" />
+                  </label>
+                  <label class="field-block">
+                    <span>适合场景</span>
+                    <input id="foodMoodsInput" type="text" placeholder="逗号分隔，例如：快一点, 约会" />
+                  </label>
+                  <label class="field-block">
+                    <span>个人评分</span>
+                    <select id="foodRatingInput">
+                      <option value="5">夯爆了</option>
+                      <option value="4">顶级</option>
+                      <option value="3" selected>人上人</option>
+                      <option value="2">NPC</option>
+                      <option value="1">拉完了</option>
+                    </select>
+                  </label>
+                  <label class="field-block">
+                    <span>复吃权重</span>
+                    <select id="foodWeightInput">
+                      <option value="5">5 很想常吃</option>
+                      <option value="4">4 比较常吃</option>
+                      <option value="3" selected>3 正常</option>
+                      <option value="2">2 偶尔</option>
+                      <option value="1">1 少推</option>
+                    </select>
+                  </label>
+                  <label class="field-block">
+                    <span>营业时间</span>
+                    <input id="foodHoursInput" type="text" placeholder="例如：11:00-22:00 / 晚上出摊" />
+                  </label>
+                  <label class="field-block full">
+                    <span>导航链接</span>
+                    <input id="foodMapInput" type="url" placeholder="高德 / 腾讯地图链接" />
+                  </label>
+                  <label class="field-block full">
+                    <span>备注</span>
+                    <textarea id="foodNoteInput" placeholder="例如：招牌、排队、适合什么时候去"></textarea>
+                  </label>
+                </div>
+                <div class="button-row">
+                  <button class="secondary-btn" id="newFoodButton" type="button">新建美食</button>
+                  <button class="primary-btn" id="saveFoodButton" type="button">保存</button>
+                  <button class="secondary-btn" id="clearFoodFormButton" type="button">清空</button>
+                  <button class="ghost-strong-btn" id="deleteFoodButton" type="button">删除这条美食</button>
+                </div>
+              </section>
+
+              <section class="sub-card inventory-wrap">
+                <div class="section-head compact-head">
+                  <div>
+                    <h3>库存</h3>
+                    <p>点一下就能改。</p>
+                  </div>
+                </div>
+                <div class="inventory-grid" id="inventoryList"></div>
+              </section>
+            </div>
+          </div>
         </section>
-
-        <aside class="manage-side">
-          <article class="card area-card">
-            <div class="section-head">
-              <div>
-                <h2>Areas</h2>
-                <p>切换区域时，也会同步到编辑器。</p>
-              </div>
-            </div>
-            <div class="pill-grid" id="manageAreaMap"></div>
-          </article>
-
-          <article class="card stats-card">
-            <div class="section-head">
-              <div>
-                <h2>Overview</h2>
-                <p>编辑前先看一下整体规模。</p>
-              </div>
-            </div>
-            <div class="stats-grid">
-              <div class="stat-box">
-                <strong id="manageAreaCount">0</strong>
-                <span>区域</span>
-              </div>
-              <div class="stat-box">
-                <strong id="manageFoodCount">0</strong>
-                <span>美食</span>
-              </div>
-              <div class="stat-box">
-                <strong id="manageMealLogCount">0</strong>
-                <span>日记</span>
-              </div>
-              <div class="stat-box">
-                <strong id="manageLocalHistoryCount">0</strong>
-                <span>最近抽中</span>
-              </div>
-            </div>
-          </article>
-        </aside>
       </section>
     </section>
 
